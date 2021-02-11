@@ -17,11 +17,12 @@ Backend packager for questionnaire plugins.
 dr_plugins_build_env/
  ├─ overlay/
  │   ├─ package-lock.json
- │   └─ package.json
+ │   ├─ package.json
+ │   └─ webpack.config.js
  ├─ src/
- │   └─ index.js
+ │   └─ main.rs
  ├─ .gitignore
- ├─ README.md
- ├─ package-lock.json
- └─ package.json
+ ├─ Cargo.lock
+ ├─ Cargo.toml
+ └─ README.md
 ```

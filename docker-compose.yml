@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  builder_env:
+    build: .
+    volumes:
+      - ./build:/env
