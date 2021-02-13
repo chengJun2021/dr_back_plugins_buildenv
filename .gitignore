@@ -1,7 +1,4 @@
 .idea/
 *.iml
 build/
-**/node_modules
-**/dist
 target/
-overlay/node_modules
