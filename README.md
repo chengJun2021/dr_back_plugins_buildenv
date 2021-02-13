@@ -16,13 +16,19 @@ Backend packager for questionnaire plugins.
 ```
 dr_plugins_build_env/
  ├─ overlay/
+ │   ├─ src/
+ │   │   ├─ index.jsx
+ │   │   └─ index.scss
  │   ├─ package-lock.json
  │   ├─ package.json
  │   └─ webpack.config.js
  ├─ src/
  │   └─ main.rs
+ ├─ .dockerignore
  ├─ .gitignore
  ├─ Cargo.lock
  ├─ Cargo.toml
- └─ README.md
+ ├─ Dockerfile
+ ├─ README.md
+ └─ docker-compose.yml
 ```

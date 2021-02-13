@@ -1,11 +1,9 @@
-const path = require('path');
-const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
     entry: ['./src/index.jsx', './src/index.scss'],
     output: {
-        path: path.join(__dirname, 'dist'),
+        path: `${process.cwd()}/dist`,
         filename: 'bundle.js'
     },
     module: {
@@ -14,6 +12,13 @@ module.exports = {
                 test: /\.m?jsx?$/,
                 exclude: /node_modules/,
                 loader: 'babel-loader'
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    MiniCssExtractPlugin.loader,
+                    "css-loader",
+                ]
             },
             {
                 test: /\.s[ac]ss$/,
@@ -25,12 +30,12 @@ module.exports = {
             }
         ]
     },
-    devServer: {
-        contentBase: path.join(__dirname, 'public')
+    resolve: {
+        extensions: ["js", "jsx", "mjs", "mjsx", "css", "scss", "sass"]
     },
     plugins: [
         new MiniCssExtractPlugin({
-            filename: 'dist/bundle.css',
+            filename: 'bundle.css',
         })
     ]
 };
