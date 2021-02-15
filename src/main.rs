@@ -1,24 +1,22 @@
 #![feature(async_closure)]
+extern crate env_logger;
+#[macro_use]
+extern crate log;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use std::error::Error;
-use std::path::PathBuf;
-use std::process::Command;
-
-use crate::utils::fs::rcopy;
 
 mod utils;
 mod builder;
 mod spawner;
+mod server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-	let source_path = PathBuf::from("/overlay/");
-	let target_path = PathBuf::from("/env");
+	env_logger::init();
 
-	rcopy(&source_path, &target_path)?;
-	spawner::spawn(&target_path).await?;
-
-	Command::new("sleep").arg("86400").output()?;
-
-	return Ok(());
+	server::listen(6969).await
 }

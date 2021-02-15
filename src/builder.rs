@@ -1,9 +1,9 @@
-use std::process::{Stdio, Command};
 use std::env;
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
+use std::process::{Command, ExitStatus, Stdio};
 
-pub(crate) fn execute_build(build_dir: &Path) -> Result<bool, Box<dyn Error>> {
+pub(crate) fn execute_build(build_dir: &Path) -> Result<ExitStatus, Box<dyn Error>> {
 	// Path has the npm stuffs in it, we have to graft that back into the process after wiping the rest of the env
 	// Rest of the env may contain sensitive stuff like tokens and database access credentials
 	//
@@ -15,7 +15,7 @@ pub(crate) fn execute_build(build_dir: &Path) -> Result<bool, Box<dyn Error>> {
 	let mut child = Command::new("sudo")
 		.args(&["-u", "root"])
 		.current_dir(&build_dir)
-		.args(&["npm", "run", "build"])
+		.args(&["webpack", "--mode=production"])
 		.env_clear()
 		// Reapply PATH, otherwise it can't access coreutils/busybox, npm/node
 		.env("PATH", path)
@@ -24,7 +24,5 @@ pub(crate) fn execute_build(build_dir: &Path) -> Result<bool, Box<dyn Error>> {
 		.stderr(Stdio::inherit())
 		.spawn()?;
 
-	let exit = child.wait()?;
-
-	return Ok(exit.success());
+	return Ok(child.wait()?);
 }

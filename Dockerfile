@@ -9,11 +9,10 @@ RUN cargo build --release
 
 FROM node:lts-buster
 RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
-WORKDIR /overlay
-COPY overlay /overlay/
+WORKDIR /env
+COPY overlay /env/
 RUN npm install
 
-WORKDIR /env
 COPY --from=builder /app/target/release/dr_plugins_build_env /usr/local/bin/dr_plugins_build_env
 
 # -r-x------ for the executable, prevents exploits that attempts to bundle

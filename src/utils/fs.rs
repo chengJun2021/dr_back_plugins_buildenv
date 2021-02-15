@@ -1,7 +1,7 @@
 use std::{fs, io};
 use std::path::Path;
 
-pub(crate) fn rcopy(source_dir: &Path, target_dir: &Path) -> io::Result<()> {
+pub(crate) fn rcopy<P: AsRef<Path>>(source_dir: P, target_dir: &Path) -> io::Result<()> {
 	for dir in fs::read_dir(source_dir)?
 		.filter(|x| x.is_ok())
 		.map(|x| x.unwrap()) {
