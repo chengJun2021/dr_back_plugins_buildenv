@@ -31,10 +31,14 @@ dr_plugins_build_env/
  │   └─ webpack.config.js
  ├─ src/
  │   ├─ utils/
+ │   │   ├─ error.rs
  │   │   ├─ fs.rs
- │   │   └─ mod.rs
+ │   │   ├─ mod.rs
+ │   │   └─ packet.rs
  │   ├─ builder.rs
- │   └─ main.rs
+ │   ├─ main.rs
+ │   ├─ server.rs
+ │   └─ spawner.rs
  ├─ .dockerignore
  ├─ .gitignore
  ├─ Cargo.lock
