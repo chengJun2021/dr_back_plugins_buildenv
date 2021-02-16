@@ -4,7 +4,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tokio::io::{AsyncBufRead, AsyncWrite, BufStream};
 use tokio::net::TcpListener;
 
-use crate::spawner::spawn;
+use crate::spawner::{BuildStatus, spawn};
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::packet::Packet;
 
@@ -32,7 +32,11 @@ async fn process_stream<S>(stream: &mut S, remote: SocketAddr) -> Result<(), Box
 				warn!("Received build request {} on {:?}", req.uuid, remote);
 				Packet::Acknowledge(req.fork(())).write(stream).await?;
 
-				let status = spawn(req.inner).await?;
+				let mut res = req.fork(BuildStatus::LowLevelError);
+
+				res.inner = drop_errors_or_default(spawn(req.inner).await);
+
+				Packet::Response(res).write(stream).await?;
 			}
 			_ => {
 				warn!("Received malformed packet on {:?}", remote);

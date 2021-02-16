@@ -10,6 +10,8 @@ use serde::Serialize;
 use tokio::fs;
 use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
+use crate::spawner::BuildStatus;
+
 use self::base64::DecodeError;
 use self::uuid::Uuid;
 
@@ -17,6 +19,7 @@ use self::uuid::Uuid;
 pub enum Packet {
 	Request(Tagged<BuildContext>),
 	Acknowledge(Tagged<()>),
+	Response(Tagged<BuildStatus>),
 	Arbitrary(Vec<u8>),
 }
 
@@ -45,12 +48,14 @@ impl Packet {
 		let id = match &self {
 			Packet::Request(_) => 0x00,
 			Packet::Acknowledge(_) => 0x01,
-			Packet::Arbitrary(_) => 0xFFu8
+			Packet::Response(_) => 0x02,
+			Packet::Arbitrary(_) => 0xFF,
 		};
 
 		let encoded = match self {
 			Packet::Request(inner) => to_json(inner).await?,
 			Packet::Acknowledge(inner) => to_json(inner).await?,
+			Packet::Response(inner) => to_json(inner).await?,
 			Packet::Arbitrary(buf) => buf
 		};
 

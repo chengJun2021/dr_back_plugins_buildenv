@@ -7,7 +7,7 @@ use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 
 use crate::builder::execute_build;
-use crate::utils::error::drop_errors_or;
+use crate::utils::error::drop_errors_or_default;
 use crate::utils::fs::rcopy;
 use crate::utils::packet::BuildContext;
 
@@ -15,17 +15,24 @@ use self::tempdir::TempDir;
 use self::zip::write::FileOptions;
 use self::zip::ZipWriter;
 
+#[derive(Deserialize, Serialize)]
 pub enum BuildStatus {
-	ValidationError(&'static str),
+	ValidationError(String),
 	WebpackExit(i32),
 	LowLevelError,
 	Success(Vec<u8>),
 }
 
+impl Default for BuildStatus {
+	fn default() -> Self {
+		BuildStatus::LowLevelError
+	}
+}
+
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
 pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
 	let result = tokio::task::spawn_blocking(async move || {
-		drop_errors_or::<_, Box<dyn Error>>(async {
+		drop_errors_or_default::<_, Box<dyn Error>>(async {
 			let td = TempDir::new("build-env-")?;
 			let working_directory: &Path = td.path();
 
@@ -35,7 +42,7 @@ pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Erro
 			// Drop build context into our working directory
 			let source_directory: PathBuf = working_directory.join("src");
 			if !ctx.extract_into(&source_directory).await? {
-				return Ok(BuildStatus::ValidationError("Possible path traversal attack detected."));
+				return Ok(BuildStatus::ValidationError("Possible path traversal attack detected.".to_string()));
 			}
 
 			// This occurs due to io/process errors,
@@ -49,7 +56,7 @@ pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Erro
 			// Run packaging utility
 			let out_directory: PathBuf = working_directory.join("dist");
 			return Ok(BuildStatus::Success(create_archive(&out_directory)?));
-		}.await, BuildStatus::LowLevelError)
+		}.await)
 	});
 
 	Ok(result.await?.await)
