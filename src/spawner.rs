@@ -27,14 +27,17 @@ pub enum BuildStatus {
     WebpackExit {
         /// Exit code, `0` should mean success and a non-zero exit code should be documented by webpack.
         code: i32,
+        /// Webpack's logs
         #[serde(rename = "webpackOutputs")]
         webpack_outputs: WebpackOutputs,
     },
     /// A more primitive error, details will be emitted into the logs.
     LowLevelError,
-    /// The build has succeeded. The buffer is a zip file of all the artefacts.
+    /// The build has succeeded.
     Success {
+        /// Base-64 encoded zip file which can be inflated to find the build artefacts
         zip: Base64Encoded,
+        /// Webpack's logs
         #[serde(rename = "webpackOutputs")]
         webpack_outputs: WebpackOutputs,
     },
