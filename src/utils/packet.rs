@@ -16,36 +16,39 @@ use self::base64::DecodeError;
 use self::uuid::Uuid;
 
 /// A packet, transmissible over the wire
+///
+/// # Packet Structure
+/// Length of packet | Rest of the packet
+/// -----------------|-------------------
+/// 4 bytes          | `Length` bytes
+///
+/// ## Length of packet
+/// Big-endian, 32 bit, unsigned integer
+///
+/// ## Rest of the packet
+/// JSON-encoded data structure of the inner types, refer to the corresponding enums above.
+///
+/// # Packet Types
+/// The following is the definitive list of packets:
+///
+/// Directionality | Corresponding Enum      | Description
+/// ---------------|-------------------------|------------
+/// Recv           | [`Packet::Request`]     | Requesting a build with a JSON build context
+/// Send           | [`Packet::Acknowledge`] | Acknowledging a build request (ie. signal the start of the build)
+/// Send           | [`Packet::Response`]    | The result of the build, including artefacts if successful
+///
 #[derive(Serialize, Deserialize)]
 pub enum Packet {
+    /// RPC Client requesting a build with a JSON build context
     Request(Tagged<BuildContext>),
+    /// RPC Server acknowledges the build request and starts the build
     Acknowledge(Tagged<()>),
+    /// RPC Server finishes the build and reports the result thereof
     Response(Tagged<BuildStatus>),
 }
 
 impl Packet {
     /// Reads a packet from the reader.
-    ///
-    /// Packet structure is as follows:
-    ///
-    /// `Length of packet` | `Rest of the packet`
-    /// -------------------|-------------------
-    /// 4 bytes            | `Length of packet` bytes
-    ///
-    /// ## Length of packet
-    /// Big-endian, 32 bit, unsigned integer
-    ///
-    /// ## Packet ID
-    /// The following is the definitive list of packet IDs:
-    ///
-    /// Type | Corresponding Enum      | Description
-    /// -----|-------------------------|------------
-    /// Recv | [`Packet::Request`]     | Requesting a build with a JSON build context
-    /// Send | [`Packet::Acknowledge`] | Acknowledging a build request (ie. signal the start of the build)
-    /// Send | [`Packet::Response`]    | The result of the build
-    ///
-    /// ## Rest of the packet
-    /// JSON-encoded data structure of the inner types, refer to the corresponding enums above.
     pub async fn read<R: AsyncBufRead + Unpin>(read: &mut R) -> Result<Packet, Box<dyn Error>> {
         let len = read.read_u32().await? as usize;
 
@@ -56,7 +59,6 @@ impl Packet {
     }
 
     /// Writes the current packet into the writer.
-    /// Refer to [`Packet::read`] for more information about the packet structure
     pub async fn write<'a, W: AsyncWrite + Unpin>(self, write: &mut W) -> Result<(), Box<dyn Error>> {
         let encoded = to_json(self).await?;
 
@@ -148,5 +150,12 @@ impl Base64Encoded {
         writer.write(&buf).await?;
 
         Ok(())
+    }
+
+    /// Creates a base64-encoded string based on the buffer
+    pub fn create(buf: &[u8]) -> Self {
+        Base64Encoded {
+            base64_string: base64::encode(buf)
+        }
     }
 }
