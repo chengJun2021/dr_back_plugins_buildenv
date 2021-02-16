@@ -15,11 +15,26 @@ use self::tempdir::TempDir;
 use self::zip::write::FileOptions;
 use self::zip::ZipWriter;
 
+/// The result of the build.
+///
+/// Defaults to [`BuildStatus::LowLevelError`]
 #[derive(Deserialize, Serialize)]
+#[serde(tag = "type")]
 pub enum BuildStatus {
+	/// A validator detected an error, human friendly description
 	ValidationError(String),
-	WebpackExit(i32),
+	/// The webpack executable returned a non-success exit code.
+	WebpackExit {
+		/// Exit code, `0` should mean success and a non-zero exit code should be documented by webpack.
+		code: i32,
+		/// Captured `stdout` of webpack. Can be displayed to the client.
+		stdout: Vec<u8>,
+		/// Captured `stderr` of webpack. Can be displayed to the client.
+		stderr: Vec<u8>,
+	},
+	/// A more primitive error, details will be emitted into the logs.
 	LowLevelError,
+	/// The build has succeeded. The buffer is a zip file of all the artefacts.
 	Success(Vec<u8>),
 }
 
@@ -49,8 +64,10 @@ pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Erro
 			// in that case the only appropriate solution is to panic and let k8s
 			// restart the pod
 			let exit = execute_build(working_directory)?;
-			if !exit.success() {
-				return Ok(BuildStatus::WebpackExit(exit.code().unwrap_or(1)));
+			if let BuildStatus::WebpackExit { code, .. } = &exit {
+				if *code != 0 {
+					return Ok(exit);
+				}
 			}
 
 			// Run packaging utility
@@ -62,7 +79,9 @@ pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Erro
 	Ok(result.await?.await)
 }
 
-/// Create a shallow copy of the directory, only taking the top level files and none of the directories
+/// Create a shallow copy of the directory
+///
+/// Currently only taking the top level files and none of the directories
 pub(crate) fn create_archive(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
 	let mut zip_buf = vec![];
 

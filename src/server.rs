@@ -8,6 +8,9 @@ use crate::spawner::{BuildStatus, spawn};
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::packet::Packet;
 
+/// Listen to RPC on the supplied port.
+/// The application binds to `0.0.0.0` as it expects to be protected by upstream firewalls.
+/// Such as kubernetes network filters.
 pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 	let server = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port)).await?;
 
@@ -22,10 +25,15 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 	}
 }
 
+/// This processes individual sessions on a separate tokio async task
+/// RPC requests are executed on a per-socket basis serially.
+/// That is, from the perspective of a client attached to a single socket, build requests are processed one at a time.
+///
+/// Parallel builds can be achieved by creating multiple RPC sessions and feeding through requests in a load-balanced fashion.
 async fn process_stream<S>(stream: &mut S, remote: SocketAddr) -> Result<(), Box<dyn Error>>
 	where S: AsyncBufRead + AsyncWrite + Unpin {
 	loop {
-		let packet = Packet::read_packet(stream).await?;
+		let packet = Packet::read(stream).await?;
 
 		match packet {
 			Packet::Request(req) => {
