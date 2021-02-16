@@ -39,11 +39,14 @@ dr_plugins_build_env/
  │   ├─ main.rs
  │   ├─ server.rs
  │   └─ spawner.rs
+ ├─ .DS_Store
  ├─ .dockerignore
  ├─ .gitignore
  ├─ Cargo.lock
  ├─ Cargo.toml
  ├─ Dockerfile
  ├─ README.md
- └─ docker-compose.yml
+ ├─ docker-compose.yml
+ ├─ precommit.sh
+ └─ rustfmt.toml
 ```
