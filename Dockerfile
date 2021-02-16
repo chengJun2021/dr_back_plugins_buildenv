@@ -1,4 +1,6 @@
 FROM rust:buster as builder
+RUN rustup default nightly
+
 WORKDIR /app
 RUN mkdir src; echo 'fn main() {}' > src/main.rs
 COPY Cargo.* ./
@@ -6,6 +8,7 @@ RUN cargo build --release
 
 COPY . .
 RUN cargo build --release
+
 
 FROM node:lts-buster
 RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
