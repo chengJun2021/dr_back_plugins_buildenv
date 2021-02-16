@@ -2,3 +2,11 @@ body {
   color: red;
   content: "This SASS stylesheet has not been built properly."
 }
+
+.--dr-not-built-properly {
+  border: 3px dotted red;
+  color: red;
+  font-size: 69px;
+  font-weight: bold;
+  padding: 1em;
+}

@@ -2,6 +2,6 @@ import React from 'react';
 
 console.warn("This JSX module has not been built properly.")
 
-const index = () => (<div>Test</div>)
+const RootElement = () => (<div className="--dr-not-built-properly">"This JSX module has not been built properly."</div>)
 
-export default index;
+export default RootElement;
