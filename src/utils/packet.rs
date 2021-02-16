@@ -59,7 +59,10 @@ impl Packet {
     }
 
     /// Writes the current packet into the writer.
-    pub async fn write<'a, W: AsyncWrite + Unpin>(self, write: &mut W) -> Result<(), Box<dyn Error>> {
+    pub async fn write<'a, W: AsyncWrite + Unpin>(
+        self,
+        write: &mut W,
+    ) -> Result<(), Box<dyn Error>> {
         let encoded = to_json(self).await?;
 
         write.write_u32(encoded.len() as u32).await?;
@@ -121,7 +124,8 @@ impl BuildContext {
             let mut file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
-                .open(dest).await?;
+                .open(dest)
+                .await?;
 
             bytes.write_to(&mut file).await?;
         }
@@ -145,7 +149,10 @@ impl Base64Encoded {
     }
 
     /// Write the held data directly into a writer
-    pub async fn write_to<W: AsyncWrite + Unpin>(&self, writer: &mut W) -> Result<(), Box<dyn Error>> {
+    pub async fn write_to<W: AsyncWrite + Unpin>(
+        &self,
+        writer: &mut W,
+    ) -> Result<(), Box<dyn Error>> {
         let buf = self.read_to_buffer()?;
         writer.write(&buf).await?;
 
@@ -155,7 +162,7 @@ impl Base64Encoded {
     /// Creates a base64-encoded string based on the buffer
     pub fn create(buf: &[u8]) -> Self {
         Base64Encoded {
-            base64_string: base64::encode(buf)
+            base64_string: base64::encode(buf),
         }
     }
 }

@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use crate::builder::execute_build;
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::fs::rcopy;
-use crate::utils::packet::{BuildContext, Base64Encoded};
+use crate::utils::packet::{Base64Encoded, BuildContext};
 
 use self::tempdir::TempDir;
 use self::zip::write::FileOptions;
@@ -58,37 +58,42 @@ impl Default for BuildStatus {
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
 pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     let result = tokio::task::spawn_blocking(async move || {
-        drop_errors_or_default::<_, Box<dyn Error>>(async {
-            let td = TempDir::new("build-env-")?;
-            let working_directory: &Path = td.path();
+        drop_errors_or_default::<_, Box<dyn Error>>(
+            async {
+                let td = TempDir::new("build-env-")?;
+                let working_directory: &Path = td.path();
 
-            // Copy node stuffs from pwd to subprocess working dir
-            rcopy(".", working_directory)?;
+                // Copy node stuffs from pwd to subprocess working dir
+                rcopy(".", working_directory)?;
 
-            // Drop build context into our working directory
-            let source_directory: PathBuf = working_directory.join("src");
-            if !ctx.extract_into(&source_directory).await? {
-                return Ok(BuildStatus::ValidationError("Possible path traversal attack detected.".to_string()));
-            }
+                // Drop build context into our working directory
+                let source_directory: PathBuf = working_directory.join("src");
+                if !ctx.extract_into(&source_directory).await? {
+                    return Ok(BuildStatus::ValidationError(
+                        "Possible path traversal attack detected.".to_string(),
+                    ));
+                }
 
-            // This occurs due to io/process errors,
-            // in that case the only appropriate solution is to panic and let k8s
-            // restart the pod
-            let (code, webpack_outputs) = execute_build(working_directory)?;
-            if code != 0 {
-                return Ok(BuildStatus::WebpackExit {
-                    code,
+                // This occurs due to io/process errors,
+                // in that case the only appropriate solution is to panic and let k8s
+                // restart the pod
+                let (code, webpack_outputs) = execute_build(working_directory)?;
+                if code != 0 {
+                    return Ok(BuildStatus::WebpackExit {
+                        code,
+                        webpack_outputs,
+                    });
+                }
+
+                // Run packaging utility
+                let out_directory: PathBuf = working_directory.join("dist");
+                return Ok(BuildStatus::Success {
+                    zip: Base64Encoded::create(&create_archive(&out_directory)?),
                     webpack_outputs,
                 });
             }
-
-            // Run packaging utility
-            let out_directory: PathBuf = working_directory.join("dist");
-            return Ok(BuildStatus::Success {
-                zip: Base64Encoded::create(&create_archive(&out_directory)?),
-                webpack_outputs,
-            });
-        }.await)
+            .await,
+        )
     });
 
     Ok(result.await?.await)
@@ -108,9 +113,7 @@ pub(crate) fn create_archive(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Error>> 
             if dir.metadata()?.is_file() {
                 archive.start_file(dir.file_name().to_string_lossy(), FileOptions::default())?;
 
-                let mut file = BufReader::new(fs::OpenOptions::new()
-                    .read(true)
-                    .open(dir.path())?);
+                let mut file = BufReader::new(fs::OpenOptions::new().read(true).open(dir.path())?);
 
                 io::copy(&mut file, &mut archive)?;
             }

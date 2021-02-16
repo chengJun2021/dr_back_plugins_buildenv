@@ -28,8 +28,11 @@ pub(crate) fn execute_build(build_dir: &Path) -> Result<(i32, WebpackOutputs), B
         .stderr(Stdio::piped())
         .output()?;
 
-    return Ok((out.status.code().unwrap_or(1), WebpackOutputs {
-        stdout: Base64Encoded::create(&out.stdout),
-        stderr: Base64Encoded::create(&out.stderr),
-    }));
+    return Ok((
+        out.status.code().unwrap_or(1),
+        WebpackOutputs {
+            stdout: Base64Encoded::create(&out.stdout),
+            stderr: Base64Encoded::create(&out.stderr),
+        },
+    ));
 }
