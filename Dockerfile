@@ -11,8 +11,12 @@ RUN cargo build --release
 
 
 FROM node:lts-buster
-RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+WORKDIR /honeypot
+COPY honeypot /honeypot/
+RUN chmod 400 /honeypot/*privileged*
+
 WORKDIR /env
+RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
 COPY overlay /env/
 RUN npm install
 
