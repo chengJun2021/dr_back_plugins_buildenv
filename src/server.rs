@@ -4,7 +4,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tokio::io::{AsyncBufRead, AsyncWrite, BufStream};
 use tokio::net::TcpListener;
 
-use crate::spawner::{spawn, BuildStatus};
+use crate::spawner::{BuildStatus, spawn};
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::packet::Packet;
 
@@ -13,6 +13,8 @@ use crate::utils::packet::Packet;
 /// Such as kubernetes network filters.
 pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
     let server = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port)).await?;
+
+    info!("Listening on 0.0.0.0:{}", port);
 
     loop {
         let (stream, remote) = server.accept().await?;
@@ -31,8 +33,8 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 ///
 /// Parallel builds can be achieved by creating multiple RPC sessions and feeding through requests in a load-balanced fashion.
 async fn process_stream<S>(stream: &mut S, remote: SocketAddr) -> Result<(), Box<dyn Error>>
-where
-    S: AsyncBufRead + AsyncWrite + Unpin,
+    where
+        S: AsyncBufRead + AsyncWrite + Unpin,
 {
     loop {
         let packet = Packet::read(stream).await?;
