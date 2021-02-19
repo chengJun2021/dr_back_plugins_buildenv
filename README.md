@@ -20,6 +20,9 @@ Backend packager for questionnaire plugins.
 
 ```
 dr_plugins_build_env/
+ ├─ honeypot/
+ │   ├─ importme.privileged.txt
+ │   └─ importme.txt
  ├─ overlay/
  │   ├─ src/
  │   │   ├─ index.jsx
@@ -30,11 +33,25 @@ dr_plugins_build_env/
  │   ├─ package.json
  │   └─ webpack.config.js
  ├─ src/
+ │   ├─ model/
+ │   │   ├─ packet/
+ │   │   │   ├─ build_context.rs
+ │   │   │   ├─ build_status.rs
+ │   │   │   └─ mod.rs
+ │   │   └─ mod.rs
+ │   ├─ test/
+ │   │   ├─ model/
+ │   │   │   ├─ packet/
+ │   │   │   │   ├─ build_context.json
+ │   │   │   │   ├─ build_context.rs
+ │   │   │   │   ├─ build_status.rs
+ │   │   │   │   └─ mod.rs
+ │   │   │   └─ mod.rs
+ │   │   └─ mod.rs
  │   ├─ utils/
  │   │   ├─ error.rs
  │   │   ├─ fs.rs
- │   │   ├─ mod.rs
- │   │   └─ packet.rs
+ │   │   └─ mod.rs
  │   ├─ builder.rs
  │   ├─ main.rs
  │   ├─ server.rs

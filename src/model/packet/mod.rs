@@ -1,19 +1,22 @@
 extern crate base64;
 extern crate uuid;
 
-use std::collections::HashMap;
 use std::error::Error;
 use std::ops::Deref;
-use std::path::Path;
 
 use serde::Serialize;
-use tokio::fs;
 use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::spawner::BuildStatus;
+pub use build_context::*;
+pub use build_status::*;
 
 use self::base64::DecodeError;
 use self::uuid::Uuid;
+
+/// Contents of a packet containing information about the build context
+mod build_context;
+/// Contents of a packet containing information about the status of the build
+mod build_status;
 
 /// A packet, transmissible over the wire
 ///
@@ -102,50 +105,26 @@ impl<T> Tagged<T> {
             inner: new_inner,
         }
     }
-}
 
-/// Build context. Basically a list of files, base64 encoded
-///
-/// This blob may be very big due to the nature of files.
-/// The external actor is recommended to store this context on S3 or other object storage services.
-#[derive(Serialize, Deserialize)]
-pub struct BuildContext {
-    files: HashMap<String, Base64Encoded>,
-}
-
-impl BuildContext {
-    pub async fn extract_into(&self, src_path: &Path) -> Result<bool, Box<dyn Error>> {
-        for (location, bytes) in &self.files {
-            let dest = src_path.join(location).canonicalize()?;
-            if !dest.starts_with(src_path) {
-                return Ok(false);
-            }
-
-            let mut file = fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(dest)
-                .await?;
-
-            bytes.write_to(&mut file).await?;
+    /// Wrap an existing object with a brand new UUIDv4
+    #[cfg(test)]
+    pub fn new(inner: T) -> Self {
+        Tagged {
+            uuid: Uuid::new_v4(),
+            inner,
         }
-
-        Ok(true)
     }
 }
 
 /// Wrapper over a base64 encoded string.
 /// Provides helper functions to peek inside the buffer or write it directly into a writer.
 #[derive(Serialize, Deserialize)]
-pub struct Base64Encoded {
-    #[serde(flatten)]
-    base64_string: String,
-}
+pub struct Base64Encoded(pub String);
 
 impl Base64Encoded {
     /// Read the contained data into a buffer
     pub fn read_to_buffer(&self) -> Result<Vec<u8>, DecodeError> {
-        base64::decode(&self.base64_string)
+        base64::decode(&self.0)
     }
 
     /// Write the held data directly into a writer
@@ -155,14 +134,13 @@ impl Base64Encoded {
     ) -> Result<(), Box<dyn Error>> {
         let buf = self.read_to_buffer()?;
         writer.write(&buf).await?;
+        writer.flush().await?;
 
         Ok(())
     }
 
     /// Creates a base64-encoded string based on the buffer
     pub fn create(buf: &[u8]) -> Self {
-        Base64Encoded {
-            base64_string: base64::encode(buf),
-        }
+        Base64Encoded(base64::encode(buf))
     }
 }

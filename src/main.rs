@@ -11,10 +11,15 @@ use std::error::Error;
 
 /// Code to invoke webpack
 mod builder;
+/// Data structures
+mod model;
 /// Utilities for operating the RPC server.
 mod server;
 /// Code for invoking `tempdir` and `zip`
 mod spawner;
+/// Unit tests
+#[cfg(test)]
+mod test;
 /// Various miscellaneous utilities
 mod utils;
 

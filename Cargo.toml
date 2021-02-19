@@ -17,6 +17,7 @@ uuid = { version = "^0.8.2", features = ["std", "v4", "serde"] }
 log = "^0.4.14"
 env_logger = "^0.8.3"
 zip = "^0.5.10"
+path-clean = "0.1.0"
 
 [profile.release]
 opt-level = 3
