@@ -1,9 +1,10 @@
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc;
+
 use plugins_commons::model::{BuildQueued, BuildStatus, Packet};
-use tokio::io::{AsyncBufRead, AsyncWrite, BufStream};
-use tokio::net::TcpListener;
 
 use crate::spawner::spawn;
 use crate::utils::error::drop_errors_or_default;
@@ -20,9 +21,9 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
         let (stream, remote) = server.accept().await?;
 
         tokio::spawn(async move {
-            info!("Spawned task for socket {}", remote);
+            info!("Handling incoming socket {}", remote);
 
-            drop_errors_or_default(process_stream(&mut BufStream::new(stream), remote).await);
+            drop_errors_or_default(process_stream(stream, remote).await);
         });
     }
 }
@@ -32,29 +33,64 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 /// That is, from the perspective of a client attached to a single socket, build requests are processed one at a time.
 ///
 /// Parallel builds can be achieved by creating multiple RPC sessions and feeding through requests in a load-balanced fashion.
-async fn process_stream<S>(stream: &mut S, remote: SocketAddr) -> Result<(), Box<dyn Error>>
-where
-    S: AsyncBufRead + AsyncWrite + Unpin,
-{
-    loop {
-        let packet = Packet::read(stream).await?;
+async fn process_stream(stream: TcpStream, remote: SocketAddr) -> Result<(), Box<dyn Error>> {
+    let (mut ingress, mut egress) = stream.into_split();
 
-        match packet {
-            Packet::Request(req) => {
-                warn!("Received build request {} on {:?}", req.uuid, remote);
-                Packet::Acknowledge(req.fork(BuildQueued { queued: true }))
-                    .write(stream)
-                    .await?;
+    let join = {
+        let (join, tx) = {
+            let (tx, mut rx) = mpsc::unbounded_channel::<Packet>();
 
-                let mut res = req.fork(BuildStatus::LowLevelError);
+            let join = tokio::spawn(async move {
+                while let Some(packet) = rx.recv().await {
+                    if packet.write(&mut egress).await.is_err() {
+                        break;
+                    }
+                }
 
-                res.inner = drop_errors_or_default(spawn(req.inner).await);
+                info!("Shutting down egress for {:?}", remote);
+            });
 
-                Packet::Response(res).write(stream).await?;
-            }
-            _ => {
+            (join, tx)
+        };
+
+        loop {
+            let packet = if let Ok(packet) = Packet::read(&mut ingress).await {
+                packet
+            } else {
                 warn!("Received malformed packet on {:?}", remote);
+
+                break;
+            };
+
+            match packet {
+                Packet::Request(req) => {
+                    info!("Received build request {} on {:?}", req.uuid, remote);
+                    if tx
+                        .send(Packet::Acknowledge(req.fork(BuildQueued { queued: true })))
+                        .is_err()
+                    {
+                        break;
+                    }
+
+                    tokio::task::spawn_blocking(async move {
+                        let mut res = req.fork(BuildStatus::LowLevelError);
+
+                        res.inner = drop_errors_or_default(spawn(req.inner));
+
+                        let _ = tx.send(Packet::Response(res));
+                    });
+                }
+                _ => {
+                    warn!("Received context-invalid packet on {:?}", remote);
+                    break;
+                }
             }
         }
-    }
+        info!("Shutting down ingress for {:?}", remote);
+
+        join
+    };
+
+    join.await?;
+    Ok(())
 }

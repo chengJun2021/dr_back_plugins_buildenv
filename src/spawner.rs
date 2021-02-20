@@ -6,57 +6,48 @@ use std::fs;
 use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 
-use crate::builder::execute_build;
-use crate::utils::error::drop_errors_or_default;
-use crate::utils::fs::rcopy;
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
+
+use crate::builder::execute_build;
+use crate::utils::fs::rcopy;
 
 use self::tempdir::TempDir;
 use self::zip::write::FileOptions;
 use self::zip::ZipWriter;
 
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
-pub(crate) async fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
-    let result = tokio::task::spawn_blocking(async move || {
-        drop_errors_or_default::<_, Box<dyn Error>>(
-            async {
-                let td = TempDir::new("build-env-")?;
-                let working_directory: &Path = td.path();
+pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
+    let td = TempDir::new("build-env-")?;
+    let working_directory: &Path = td.path();
 
-                // Copy node stuffs from pwd to subprocess working dir
-                rcopy(".", working_directory)?;
+    // Copy node stuffs from pwd to subprocess working dir
+    rcopy(".", working_directory)?;
 
-                // Drop build context into our working directory
-                let source_directory: PathBuf = working_directory.join("src");
-                if !ctx.extract_into(&source_directory).await? {
-                    return Ok(BuildStatus::ValidationError(
-                        "Possible path traversal attack detected.".to_string(),
-                    ));
-                }
+    // Drop build context into our working directory
+    let source_directory: PathBuf = working_directory.join("src");
+    if !ctx.extract_into(&source_directory)? {
+        return Ok(BuildStatus::ValidationError(
+            "Possible path traversal attack detected.".to_string(),
+        ));
+    }
 
-                // This occurs due to io/process errors,
-                // in that case the only appropriate solution is to panic and let k8s
-                // restart the pod
-                let (code, webpack_outputs) = execute_build(working_directory)?;
-                if code != 0 {
-                    return Ok(BuildStatus::WebpackExit {
-                        code,
-                        webpack_outputs,
-                    });
-                }
+    // This occurs due to io/process errors,
+    // in that case the only appropriate solution is to panic and let k8s
+    // restart the pod
+    let (code, webpack_outputs) = execute_build(working_directory)?;
+    if code != 0 {
+        return Ok(BuildStatus::WebpackExit {
+            code,
+            webpack_outputs,
+        });
+    }
 
-                // Run packaging utility
-                let out_directory: PathBuf = working_directory.join("dist");
-                return Ok(BuildStatus::Success {
-                    zip: Base64Encoded::create(&create_archive(&out_directory)?),
-                    webpack_outputs,
-                });
-            }
-            .await,
-        )
+    // Run packaging utility
+    let out_directory: PathBuf = working_directory.join("dist");
+    return Ok(BuildStatus::Success {
+        zip: Base64Encoded::create(&create_archive(&out_directory)?),
+        webpack_outputs,
     });
-
-    Ok(result.await?.await)
 }
 
 /// Create a shallow copy of the directory
