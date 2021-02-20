@@ -36,6 +36,7 @@ dr_plugins_build_env/
  │   ├─ model/
  │   │   ├─ packet/
  │   │   │   ├─ build_context.rs
+ │   │   │   ├─ build_queued.rs
  │   │   │   ├─ build_status.rs
  │   │   │   └─ mod.rs
  │   │   └─ mod.rs

@@ -4,7 +4,7 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use tokio::io::{AsyncBufRead, AsyncWrite, BufStream};
 use tokio::net::TcpListener;
 
-use crate::model::packet::{BuildStatus, Packet};
+use crate::model::packet::{BuildQueued, BuildStatus, Packet};
 use crate::spawner::spawn;
 use crate::utils::error::drop_errors_or_default;
 
@@ -42,7 +42,9 @@ where
         match packet {
             Packet::Request(req) => {
                 warn!("Received build request {} on {:?}", req.uuid, remote);
-                Packet::Acknowledge(req.fork(())).write(stream).await?;
+                Packet::Acknowledge(req.fork(BuildQueued { queued: true }))
+                    .write(stream)
+                    .await?;
 
                 let mut res = req.fork(BuildStatus::LowLevelError);
 

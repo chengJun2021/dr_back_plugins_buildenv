@@ -8,6 +8,7 @@ use serde::Serialize;
 use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 pub use build_context::*;
+pub use build_queued::*;
 pub use build_status::*;
 
 use self::base64::DecodeError;
@@ -15,6 +16,8 @@ use self::uuid::Uuid;
 
 /// Contents of a packet containing information about the build context
 mod build_context;
+/// Contents of a packet containing information about the position of the request in the queue, if it's queued
+mod build_queued;
 /// Contents of a packet containing information about the status of the build
 mod build_status;
 
@@ -41,13 +44,14 @@ mod build_status;
 /// Send           | [`Packet::Response`]    | The result of the build, including artefacts if successful
 ///
 #[derive(Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Packet {
     /// RPC Client requesting a build with a JSON build context
     Request(Tagged<BuildContext>),
-    /// RPC Server acknowledges the build request and starts the build
-    Acknowledge(Tagged<()>),
     /// RPC Server finishes the build and reports the result thereof
     Response(Tagged<BuildStatus>),
+    /// RPC Server acknowledges the build request and starts the build
+    Acknowledge(Tagged<BuildQueued>),
 }
 
 impl Packet {
@@ -56,7 +60,11 @@ impl Packet {
         let len = read.read_u32().await? as usize;
 
         let mut buf = vec![0u8; len];
-        read.read_buf(&mut buf).await?;
+        let mut read_bytes = 0;
+
+        while read_bytes < len {
+            read_bytes += read.read(&mut buf[read_bytes..len]).await?;
+        }
 
         return Ok(serde_json::from_slice(&buf)?);
     }
