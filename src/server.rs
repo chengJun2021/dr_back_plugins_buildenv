@@ -65,10 +65,8 @@ async fn process_stream(stream: TcpStream, remote: SocketAddr) -> Result<(), Box
             match packet {
                 Packet::Request(req) => {
                     info!("Received build request {} on {:?}", req.uuid, remote);
-                    if tx
-                        .send(Packet::Acknowledge(req.fork(BuildQueued { queued: true })))
-                        .is_err()
-                    {
+                    let ack = Packet::Acknowledge(req.fork(BuildQueued { queued: true }));
+                    if tx.send(ack).is_err() {
                         break;
                     }
 
