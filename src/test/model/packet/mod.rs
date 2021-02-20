@@ -65,6 +65,8 @@ async fn packet_read_write() {
             .unwrap();
     }
 
+    bytes_over_wire.extend_from_slice("Polluting the buffer with extra bytes.".as_bytes());
+
     // Read a packet using the reference implementation
     {
         let mut read = Cursor::new(&mut bytes_over_wire);
