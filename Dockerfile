@@ -5,12 +5,13 @@ WORKDIR /app
 RUN mkdir src; echo 'fn main() {}' > src/main.rs
 COPY Cargo.* ./
 
-COPY plugins_commons/Cargo.* ./plugins_commons/
+COPY plugins_commons/Cargo.* plugins_commons/
 RUN mkdir plugins_commons/src; touch plugins_commons/src/lib.rs
 
 RUN cargo build --release
 
 COPY . .
+COPY plugins_commons/ plugins_commons/
 RUN cargo build --release
 
 
