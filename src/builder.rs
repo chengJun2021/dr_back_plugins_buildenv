@@ -3,7 +3,7 @@ use std::error::Error;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use crate::model::packet::{Base64Encoded, WebpackOutputs};
+use plugins_commons::model::{Base64Encoded, WebpackOutputs};
 
 /// System to setup the build environment for webpack
 pub(crate) fn execute_build(build_dir: &Path) -> Result<(i32, WebpackOutputs), Box<dyn Error>> {

@@ -10,14 +10,13 @@ edition = "2018"
 tempdir = "^0.3"
 tokio = { version = "^1", features = ["full"] }
 serde = "^1.0.123"
-serde_derive = "^1.0.123"
 serde_json = "^1.0.62"
-base64 = "^0.13.0"
-uuid = { version = "^0.8.2", features = ["std", "v4", "serde"] }
 log = "^0.4.14"
 env_logger = "^0.8.3"
 zip = "^0.5.10"
-path-clean = "0.1.0"
+
+[dependencies.plugins_commons]
+path = "../dr_back_plugins_rustCommons"
 
 [profile.release]
 opt-level = 3

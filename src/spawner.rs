@@ -7,7 +7,7 @@ use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 
 use crate::builder::execute_build;
-use crate::model::packet::{Base64Encoded, BuildContext, BuildStatus};
+use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::fs::rcopy;
 
