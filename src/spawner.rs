@@ -7,9 +7,9 @@ use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 
 use crate::builder::execute_build;
-use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 use crate::utils::error::drop_errors_or_default;
 use crate::utils::fs::rcopy;
+use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 
 use self::tempdir::TempDir;
 use self::zip::write::FileOptions;

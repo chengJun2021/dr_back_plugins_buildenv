@@ -23,7 +23,7 @@ mod utils;
 /// Main function, initializes loggers and the socket server.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-	env_logger::init();
+    env_logger::init();
 
-	server::listen(6969).await
+    server::listen(6969).await
 }

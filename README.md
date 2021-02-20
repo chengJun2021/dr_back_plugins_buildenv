@@ -19,7 +19,7 @@ Backend packager for questionnaire plugins.
 # Project Directory Structure
 
 ```
-dr_plugins_build_env/
+dr_back_plugins_buildenv/
  ├─ honeypot/
  │   ├─ importme.privileged.txt
  │   └─ importme.txt
@@ -32,22 +32,34 @@ dr_plugins_build_env/
  │   ├─ package-lock.json
  │   ├─ package.json
  │   └─ webpack.config.js
- ├─ src/
- │   ├─ model/
- │   │   ├─ packet/
- │   │   │   ├─ build_context.rs
- │   │   │   ├─ build_queued.rs
- │   │   │   ├─ build_status.rs
- │   │   │   └─ mod.rs
- │   │   └─ mod.rs
- │   ├─ test/
+ ├─ plugins_commons/
+ │   ├─ src/
  │   │   ├─ model/
  │   │   │   ├─ packet/
- │   │   │   │   ├─ build_context.json
  │   │   │   │   ├─ build_context.rs
+ │   │   │   │   ├─ build_queued.rs
  │   │   │   │   ├─ build_status.rs
  │   │   │   │   └─ mod.rs
+ │   │   │   ├─ mod.rs
+ │   │   │   └─ util.rs
+ │   │   ├─ tests/
+ │   │   │   ├─ model/
+ │   │   │   │   ├─ packet/
+ │   │   │   │   │   ├─ build_context.json
+ │   │   │   │   │   ├─ build_context.malicious.abs.json
+ │   │   │   │   │   ├─ build_context.malicious.pt.json
+ │   │   │   │   │   ├─ build_context.rs
+ │   │   │   │   │   ├─ build_status.rs
+ │   │   │   │   │   └─ mod.rs
+ │   │   │   │   └─ mod.rs
  │   │   │   └─ mod.rs
+ │   │   └─ lib.rs
+ │   ├─ .gitignore
+ │   ├─ Cargo.lock
+ │   ├─ Cargo.toml
+ │   └─ README.md
+ ├─ src/
+ │   ├─ test/
  │   │   └─ mod.rs
  │   ├─ utils/
  │   │   ├─ error.rs
@@ -59,6 +71,7 @@ dr_plugins_build_env/
  │   └─ spawner.rs
  ├─ .dockerignore
  ├─ .gitignore
+ ├─ .gitmodules
  ├─ Cargo.lock
  ├─ Cargo.toml
  ├─ Dockerfile
