@@ -1,0 +1,3 @@
+[submodule "plugins_commons"]
+	path = plugins_commons
+	url = git@github.com:possie-engine/dr_back_plugins_rustCommons.git

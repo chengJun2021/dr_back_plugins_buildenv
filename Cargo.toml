@@ -16,7 +16,7 @@ env_logger = "^0.8.3"
 zip = "^0.5.10"
 
 [dependencies.plugins_commons]
-path = "../dr_back_plugins_rustCommons"
+path = "./plugins_commons"
 
 [profile.release]
 opt-level = 3
