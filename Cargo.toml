@@ -1,5 +1,5 @@
 [package]
-name = "dr_plugins_build_env"
+name = "buildenv"
 version = "0.1.0"
 authors = ["matt253657 <matthew.chong@datareachable.com>"]
 edition = "2018"

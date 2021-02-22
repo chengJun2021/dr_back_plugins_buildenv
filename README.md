@@ -33,8 +33,15 @@ dr_back_plugins_buildenv/
  │   ├─ package.json
  │   └─ webpack.config.js
  ├─ plugins_commons/
+ │   ├─ .github/
+ │   │   └─ workflows/
+ │   │       └─ unit-testing.yml
  │   ├─ src/
  │   │   ├─ model/
+ │   │   │   ├─ http/
+ │   │   │   │   ├─ mod.rs
+ │   │   │   │   ├─ request.rs
+ │   │   │   │   └─ response.rs
  │   │   │   ├─ packet/
  │   │   │   │   ├─ build_context.rs
  │   │   │   │   ├─ build_queued.rs

@@ -47,6 +47,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
+name = "buildenv"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "plugins_commons",
+ "serde",
+ "serde_json",
+ "tempdir",
+ "tokio",
+ "zip",
+]
+
+[[package]]
 name = "byteorder"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -104,20 +118,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81156fece84ab6a9f2afdb109ce3ae577e42b1228441eded99bd77f627953b1a"
 dependencies = [
  "cfg-if 1.0.0",
-]
-
-[[package]]
-name = "dr_plugins_build_env"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "log",
- "plugins_commons",
- "serde",
- "serde_json",
- "tempdir",
- "tokio",
- "zip",
 ]
 
 [[package]]
