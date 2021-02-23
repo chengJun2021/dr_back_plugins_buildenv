@@ -25,6 +25,8 @@ pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
 
     // Drop build context into our working directory
     let source_directory: PathBuf = working_directory.join("src");
+    fs::create_dir(&source_directory)?;
+
     if !ctx.extract_into(&source_directory)? {
         return Ok(BuildStatus::ValidationError(
             "Possible path traversal attack detected.".to_string(),
