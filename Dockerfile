@@ -15,6 +15,8 @@ WORKDIR /env
 RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
 COPY overlay /env/
 RUN npm install
+RUN chmod -R +x .
+RUN groupadd builder; useradd bob; usermod -aG builder bob
 
 COPY --from=builder /app/target/release/buildenv /usr/local/bin/buildenv
 

@@ -1,7 +1,7 @@
-use std::env;
 use std::error::Error;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::{env, fs};
 
 use plugins_commons::model::{Base64Encoded, WebpackOutputs};
 
@@ -14,16 +14,29 @@ pub(crate) fn execute_build(build_dir: &Path) -> Result<(i32, WebpackOutputs), B
     // and handling everything as solid blocks of data, we're gonna have to make compromises
     let path = env::var("PATH")?;
 
+    // Create a nobody-owned output directory
+    let out_path = build_dir.join("dist");
+    fs::create_dir(&out_path)?;
+    Command::new("chown")
+        .arg("bob:builder")
+        .arg(&out_path)
+        .spawn()?
+        .wait()?;
+
     // Isolated running enclave but that may cause dependencies problems
     let out = Command::new("sudo")
         // Wipe all envs
         .env_clear()
         // Reapply PATH, otherwise it can't access coreutils/busybox, npm/node
         .env("PATH", path)
-        // -E passes PATH through, -u sets user to nobody
-        .args(&["-E", "-u", "nobody"])
+        // Pass PATH through, set user to bob
+        .args(&["--preserve-env", "-u", "bob"])
         .current_dir(&build_dir)
-        .args(&["webpack", "--mode=production"])
+        .args(&[
+            "node",
+            "node_modules/webpack-cli/bin/cli.js",
+            "--mode=production",
+        ])
         // Debug outputs, remove in prod?
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
