@@ -2,9 +2,9 @@ extern crate tempdir;
 extern crate zip;
 
 use std::error::Error;
+use std::fs;
 use std::io::{self, BufReader, Cursor};
 use std::path::{Path, PathBuf};
-use std::fs;
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 
@@ -18,10 +18,10 @@ use self::zip::ZipWriter;
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
 pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     let td = TempDir::new("build-env")?;
-    let working_directory= td.path().to_owned();
+    let working_directory = td.path();
 
     // Copy node stuffs from pwd to subprocess working dir
-    rcopy(Path::new(".").canonicalize().unwrap(), &working_directory)?;
+    rcopy(Path::new(".").canonicalize().unwrap(), working_directory)?;
 
     // Drop build context into our working directory
     let source_directory: PathBuf = working_directory.join("src");
@@ -36,7 +36,7 @@ pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     // This occurs due to io/process errors,
     // in that case the only appropriate solution is to panic and let k8s
     // restart the pod
-    let (code, webpack_outputs) = execute_build(&working_directory)?;
+    let (code, webpack_outputs) = execute_build(working_directory)?;
 
     if code != 0 {
         return Ok(BuildStatus::WebpackExit {

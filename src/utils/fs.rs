@@ -2,9 +2,6 @@ use std::path::Path;
 use std::{fs, io};
 
 /// Recursively copy a source directory into the target.
-// ///
-// /// - On **unix** platforms, this will generate symlinks only at the top level.
-// /// - On **non-unix** platforms, this will deep copy all files recursively.
 pub(crate) fn rcopy<P: AsRef<Path>>(source_dir: P, target_dir: &Path) -> io::Result<()> {
     for dir in fs::read_dir(source_dir)?
         .filter(|x| x.is_ok())
@@ -21,28 +18,14 @@ pub(crate) fn rcopy<P: AsRef<Path>>(source_dir: P, target_dir: &Path) -> io::Res
             }
         }
 
-        // No longer using symlinks because some webpack script is not detecting node's pwd properly
-        //
-        // When on unix, generate a few symlinks
-        // #[cfg(any(target_os = "linux", target_os = "macos"))]
-        // {
-        //     use std::os::unix::fs as unixfs;
-        //
-        //     unixfs::symlink(dir.path(), &current_target)?;
-        // }
-
-        // Manually copy files and create directories when not on unix
-        // #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        {
-            if current_target_is_dir {
-                if !current_target_exists {
-                    fs::create_dir(&current_target)?;
-                }
-
-                rcopy(&dir.path(), &current_target)?;
-            } else {
-                fs::copy(dir.path(), current_target)?;
+        if current_target_is_dir {
+            if !current_target_exists {
+                fs::create_dir(&current_target)?;
             }
+
+            rcopy(&dir.path(), &current_target)?;
+        } else {
+            fs::copy(dir.path(), current_target)?;
         }
     }
 
