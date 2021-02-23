@@ -38,10 +38,6 @@ dr_back_plugins_buildenv/
  │   │       └─ unit-testing.yml
  │   ├─ src/
  │   │   ├─ model/
- │   │   │   ├─ http/
- │   │   │   │   ├─ mod.rs
- │   │   │   │   ├─ request.rs
- │   │   │   │   └─ response.rs
  │   │   │   ├─ packet/
  │   │   │   │   ├─ build_context.rs
  │   │   │   │   ├─ build_queued.rs

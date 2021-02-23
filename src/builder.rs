@@ -16,12 +16,14 @@ pub(crate) fn execute_build(build_dir: &Path) -> Result<(i32, WebpackOutputs), B
 
     // Isolated running enclave but that may cause dependencies problems
     let out = Command::new("sudo")
-        .args(&["-u", "root"])
-        .current_dir(&build_dir)
-        .args(&["webpack", "--mode=production"])
+        // Wipe all envs
         .env_clear()
         // Reapply PATH, otherwise it can't access coreutils/busybox, npm/node
         .env("PATH", path)
+        // -E passes PATH through, -u sets user to nobody
+        .args(&["-E", "-u", "nobody"])
+        .current_dir(&build_dir)
+        .args(&["webpack", "--mode=production"])
         // Debug outputs, remove in prod?
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
