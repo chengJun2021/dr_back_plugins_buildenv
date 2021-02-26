@@ -21,7 +21,7 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 
     info!("Listening on 0.0.0.0:{}", port);
 
-    let mut limiter = Arc::new(Semaphore::new(
+    let limiter = Arc::new(Semaphore::new(
         env::var("PORT_LIMITS")
             .map(|i| i.parse().unwrap())
             .unwrap_or(8),
@@ -30,10 +30,10 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
     loop {
         let (stream, remote) = server.accept().await?;
 
+        let limiter = Arc::clone(&limiter);
         tokio::spawn(async move {
             info!("Handling incoming socket {}", remote);
 
-            let limiter = Arc::clone(&limiter);
             drop_errors_or_default(process_stream(stream, remote, limiter).await);
         });
     }
@@ -80,8 +80,8 @@ async fn process_stream(
             };
 
             let join = tokio::spawn(async move {
-                egress_join.await;
-                heartbeat_join.await;
+                let _ = egress_join.await;
+                let _ = heartbeat_join.await;
             });
 
             (join, tx)
@@ -98,37 +98,43 @@ async fn process_stream(
 
             match packet {
                 Packet::Request(req) => {
-                    info!("Received build request {} on {:?}", req.uuid, remote);
-
                     let uuid = req.uuid;
 
-                    let limiter = Arc::clone(&limiter);
-                    let queued = if let Ok(permit) = limiter.try_acquire() {
-                        let tx = tx.clone();
-                        tokio::task::spawn_blocking(move || {
-                            let mut res = req.fork(BuildStatus::LowLevelError);
-                            res.inner = drop_errors_or_default(spawn(req.inner));
+                    info!("Received build request {} on {:?}", uuid, remote);
 
-                            mem::drop(permit);
-                            let _ = tx.send(Packet::Response(res));
+                    let slots_available = limiter.available_permits();
+
+                    let tx = tx.clone();
+                    let limiter = Arc::clone(&limiter);
+                    tokio::spawn(async move {
+                        let mut ack = Packet::Acknowledge(Tagged {
+                            uuid,
+                            inner: BuildQueued {
+                                queued: false,
+                                slots_available,
+                            },
                         });
 
-                        true
-                    } else {
-                        false
-                    };
+                        if let Ok(permit) = limiter.try_acquire() {
+                            if let Packet::Acknowledge(ref mut t) = &mut ack {
+                                t.inner.queued = true;
+                            }
+                            let _ = tx.send(ack);
 
-                    let ack = Packet::Acknowledge(Tagged {
-                        uuid,
-                        inner: BuildQueued {
-                            queued,
-                            slots_available: limiter.available_permits(),
-                        },
+                            tokio::task::spawn_blocking(move || {
+                                let mut res = req.fork(BuildStatus::LowLevelError);
+                                res.inner = drop_errors_or_default(spawn(req.inner));
+
+                                info!("Completed build request {} on {:?}", uuid, remote);
+                                let _ = tx.send(Packet::Response(res));
+                            })
+                            .await
+                            .unwrap();
+                            mem::drop(permit);
+                        } else {
+                            let _ = tx.send(ack);
+                        }
                     });
-
-                    if tx.send(ack).is_err() {
-                        break;
-                    }
                 }
                 Packet::Heartbeat => (),
                 _ => {
