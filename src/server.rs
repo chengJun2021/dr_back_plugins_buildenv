@@ -1,8 +1,10 @@
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::sync::Arc;
+use std::{env, mem};
 
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 
 use plugins_commons::model::{BuildQueued, BuildStatus, Packet};
 
@@ -17,23 +19,34 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 
     info!("Listening on 0.0.0.0:{}", port);
 
+    let mut limiter = Arc::new(Semaphore::new(
+        env::var("PORT_LIMITS")
+            .map(|i| i.parse().unwrap())
+            .unwrap_or(8),
+    ));
+
     loop {
         let (stream, remote) = server.accept().await?;
 
         tokio::spawn(async move {
             info!("Handling incoming socket {}", remote);
 
-            drop_errors_or_default(process_stream(stream, remote).await);
+            let limiter = Arc::clone(&limiter);
+            drop_errors_or_default(process_stream(stream, remote, limiter).await);
         });
     }
 }
 
 /// This processes individual sessions on a separate tokio async task
-/// RPC requests are executed on a per-socket basis serially.
-/// That is, from the perspective of a client attached to a single socket, build requests are processed one at a time.
+/// RPC requests are executed in parallel.
 ///
-/// Parallel builds can be achieved by creating multiple RPC sessions and feeding through requests in a load-balanced fashion.
-async fn process_stream(stream: TcpStream, remote: SocketAddr) -> Result<(), Box<dyn Error>> {
+/// Each stream can introduce parallel tasks and they may be returned in arbitrary order.
+/// There is also a potential of getting tasks rejected when the pod is overloaded.
+async fn process_stream(
+    stream: TcpStream,
+    remote: SocketAddr,
+    limiter: Arc<Semaphore>,
+) -> Result<(), Box<dyn Error>> {
     let (mut ingress, mut egress) = stream.into_split();
 
     let join = {
@@ -65,19 +78,29 @@ async fn process_stream(stream: TcpStream, remote: SocketAddr) -> Result<(), Box
             match packet {
                 Packet::Request(req) => {
                     info!("Received build request {} on {:?}", req.uuid, remote);
-                    let ack = Packet::Acknowledge(req.fork(BuildQueued { queued: true }));
+                    let queued = if let Ok(permit) = limiter.try_acquire() {
+                        let tx = tx.clone();
+                        tokio::task::spawn_blocking(move || {
+                            let mut res = req.fork(BuildStatus::LowLevelError);
+
+                            res.inner = drop_errors_or_default(spawn(req.inner));
+
+                            mem::drop(permit);
+                            let _ = tx.send(Packet::Response(res));
+                        });
+
+                        true
+                    } else {
+                        false
+                    };
+
+                    let ack = Packet::Acknowledge(req.fork(BuildQueued {
+                        queued,
+                        slots_available: limiter.available_permits(),
+                    }));
                     if tx.send(ack).is_err() {
                         break;
                     }
-
-                    let tx = tx.clone();
-                    tokio::task::spawn_blocking(move || {
-                        let mut res = req.fork(BuildStatus::LowLevelError);
-
-                        res.inner = drop_errors_or_default(spawn(req.inner));
-
-                        let _ = tx.send(Packet::Response(res));
-                    });
                 }
                 _ => {
                     warn!("Received context-invalid packet on {:?}", remote);
