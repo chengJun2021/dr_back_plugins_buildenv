@@ -21,14 +21,18 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
 
     info!("Listening on 0.0.0.0:{}", port);
 
-    let limiter = Arc::new(Semaphore::new(
-        env::var("BUILD_LIMITS")
-            .map(|i| i.parse().unwrap())
-            .unwrap_or(16),
-    ));
+    let budget = env::var("BUILD_LIMITS")
+        .map(|i| i.parse().unwrap())
+        .unwrap_or(16);
+    let limiter = Arc::new(Semaphore::new(budget));
 
     loop {
         let (stream, remote) = server.accept().await?;
+
+        /// Drop new connections if 3/4 of the design capacity is occupied
+        if limiter.available_permits() <= budget / 4 {
+            continue;
+        }
 
         let limiter = Arc::clone(&limiter);
         tokio::spawn(async move {
