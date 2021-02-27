@@ -1,8 +1,8 @@
 **/node_modules/
 **/target/
-/target/
-build/
+target/
 overlay/src
 overlay/dist
+overlay/node_modules
 .idea
 *.iml

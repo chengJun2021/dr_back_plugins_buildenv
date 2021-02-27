@@ -29,7 +29,7 @@ pub async fn listen(port: u16) -> Result<(), Box<dyn Error>> {
     loop {
         let (stream, remote) = server.accept().await?;
 
-        /// Drop new connections if 3/4 of the design capacity is occupied
+        // Drop new connections if 3/4 of the design capacity is occupied
         if limiter.available_permits() <= budget / 4 {
             continue;
         }

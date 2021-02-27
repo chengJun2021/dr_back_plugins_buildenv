@@ -21,8 +21,10 @@ Backend packager for questionnaire plugins.
 ```
 dr_back_plugins_buildenv/
  ├─ honeypot/
- │   ├─ importme.privileged.txt
- │   └─ importme.txt
+ │   ├─ importme.js
+ │   ├─ importme.json
+ │   ├─ importme.privileged.js
+ │   └─ importme.privileged.json
  ├─ overlay/
  │   ├─ src/
  │   │   ├─ index.jsx
