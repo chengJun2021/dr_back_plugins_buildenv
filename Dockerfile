@@ -20,9 +20,9 @@ RUN groupadd builder; useradd bob; usermod -aG builder bob
 
 COPY --from=builder /app/target/release/buildenv /usr/local/bin/buildenv
 
-# -r-x------ for the executable, prevents exploits that attempts to bundle
+# ---x------ for the executable, prevents exploits that attempts to bundle
 # system resources by require() or import()
 #
 # There will be static analysis in addition to this
-RUN chmod 500 /usr/local/bin/buildenv
+RUN chmod 100 /usr/local/bin/buildenv
 CMD ["buildenv"]
