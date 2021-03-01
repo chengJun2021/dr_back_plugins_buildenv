@@ -43,7 +43,7 @@ pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>
     // This occurs due to io/process errors,
     // in that case the only appropriate solution is to panic and let k8s
     // restart the pod
-    let (code, eslint_outputs) = execute_lint(&source_directory, &ctx)?;
+    let (code, eslint_outputs) = execute_lint(working_directory, &ctx)?;
     if code != 0 {
         return Ok(BuildStatus::ESLintExit {
             code,
