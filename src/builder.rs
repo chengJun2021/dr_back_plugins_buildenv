@@ -28,7 +28,12 @@ pub(crate) fn execute_lint(
     .map(|s| s.to_string())
     .collect::<Vec<_>>();
 
-    cmd.extend(ctx.files.keys().map(|k| k.to_owned()));
+    cmd.extend(
+        ctx.files
+            .keys()
+            .filter(|k| k.ends_with("js") || k.ends_with("jsx"))
+            .map(|k| k.to_owned()),
+    );
 
     return execute_unprivileged_command(build_dir, &cmd);
 }
