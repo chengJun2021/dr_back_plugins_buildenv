@@ -26,10 +26,15 @@ dr_back_plugins_buildenv/
  │   ├─ importme.privileged.js
  │   └─ importme.privileged.json
  ├─ overlay/
+ │   ├─ lib/
+ │   │   └─ rules/
+ │   │       └─ no-import-fn.js
  │   ├─ src/
+ │   │   ├─ dodgyImport.js
  │   │   ├─ index.jsx
  │   │   └─ index.scss
  │   ├─ .babelrc
+ │   ├─ .eslintrc.json
  │   ├─ .gitignore
  │   ├─ package-lock.json
  │   ├─ package.json

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 
-use crate::builder::execute_build;
+use crate::builder::*;
 use crate::utils::fs::rcopy;
 
 use self::tempdir::TempDir;
@@ -16,24 +16,42 @@ use self::zip::write::FileOptions;
 use self::zip::ZipWriter;
 
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
-pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
+pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     let td = TempDir::new("build-env")?;
     let working_directory = td.path();
 
-    // Copy node stuffs from pwd to subprocess working dir
+    // Copy node stufut fs from pwd to subprocess working dir
     rcopy(Path::new(".").canonicalize().unwrap(), working_directory)?;
 
     // Drop build context into our working directory
     let source_directory: PathBuf = working_directory.join("src");
     fs::create_dir(&source_directory)?;
 
-    if !ctx.extract_into(&source_directory)? {
-        return Ok(BuildStatus::ValidationError(
-            "Possible path traversal attack detected.".to_string(),
-        ));
+    // Sanitize all the keys in a given build context
+    {
+        let sus_paths = ctx.sanitize();
+        if sus_paths.len() > 0 {
+            return Ok(BuildStatus::ValidationError(format!(
+                "Possible path traversal attack detected.\n{:?}",
+                sus_paths
+            )));
+        };
     }
 
+    ctx.extract_into(&source_directory)?;
+
     // This occurs due to io/process errors,
+    // in that case the only appropriate solution is to panic and let k8s
+    // restart the pod
+    let (code, eslint_outputs) = execute_lint(&source_directory, &ctx)?;
+    if code != 0 {
+        return Ok(BuildStatus::ESLintExit {
+            code,
+            eslint_outputs,
+        });
+    }
+
+    // The error embedded occurs due to io/process errors,
     // in that case the only appropriate solution is to panic and let k8s
     // restart the pod
     let (code, webpack_outputs) = execute_build(working_directory)?;
@@ -41,6 +59,7 @@ pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     if code != 0 {
         return Ok(BuildStatus::WebpackExit {
             code,
+            eslint_outputs,
             webpack_outputs,
         });
     }
@@ -49,6 +68,7 @@ pub(crate) fn spawn(ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
     let out_directory: PathBuf = working_directory.join("dist");
     return Ok(BuildStatus::Success {
         zip: Base64Encoded::create(&create_archive(&out_directory)?),
+        eslint_outputs,
         webpack_outputs,
     });
 }
