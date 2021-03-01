@@ -32,7 +32,7 @@ pub(crate) fn execute_lint(
         ctx.files
             .keys()
             .filter(|k| k.ends_with("js") || k.ends_with("jsx"))
-            .map(|k| k.to_owned()),
+            .map(|k| format!("src/{}", k)),
     );
 
     return execute_unprivileged_command(build_dir, &cmd);
