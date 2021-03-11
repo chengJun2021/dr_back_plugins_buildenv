@@ -4,7 +4,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{env, fs};
 
-use plugins_commons::model::{Base64Encoded, BuildContext, SubprocessOutputs};
+use plugins_commons::model::{BuildContext, SubprocessOutputs};
 
 /// System to execute eslint
 pub(crate) fn execute_lint(
@@ -88,8 +88,8 @@ fn execute_unprivileged_command<S: AsRef<OsStr>>(
     return Ok((
         out.status.code().unwrap_or(1),
         SubprocessOutputs {
-            stdout: Base64Encoded::create(&out.stdout),
-            stderr: Base64Encoded::create(&out.stderr),
+            stdout: String::from_utf8_lossy(&out.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&out.stderr).to_string(),
         },
     ));
 }
