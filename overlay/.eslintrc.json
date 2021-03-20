@@ -20,6 +20,7 @@
     "require-await": "warn",
     "no-eval": "error",
     "no-implied-eval": "error",
+    "no-unused-vars": "warn",
     "import/first": "warn",
     "import/no-amd": "error",
     "import/no-unresolved": "error",
