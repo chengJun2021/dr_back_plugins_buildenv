@@ -1,8 +1,8 @@
+use std::{env, fs};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::{env, fs};
 
 use plugins_commons::model::{BuildContext, SubprocessOutputs};
 
@@ -24,9 +24,9 @@ pub(crate) fn execute_lint(
         // ```
         "--",
     ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect::<Vec<_>>();
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>();
 
     cmd.extend(
         ctx.files
@@ -85,11 +85,14 @@ fn execute_unprivileged_command<S: AsRef<OsStr>>(
         .stderr(Stdio::piped())
         .output()?;
 
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    let pwd_string = pwd.to_string_lossy().to_string() + "/";
     return Ok((
         out.status.code().unwrap_or(1),
         SubprocessOutputs {
-            stdout: String::from_utf8_lossy(&out.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&out.stderr).to_string(),
+            stdout: stdout.replace(&pwd_string, ""),
+            stderr: stderr.replace(&pwd_string, ""),
         },
     ));
 }
