@@ -1,11 +1,12 @@
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use std::{env, mem};
 
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{Mutex as AsyncMutex, Semaphore};
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::{mpsc, Mutex as AsyncMutex, RwLock, Semaphore};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, sleep};
 
@@ -56,7 +57,8 @@ async fn process_stream(
 ) -> Result<(), Box<dyn Error>> {
     let stream = Arc::new(AsyncMutex::new(stream));
 
-    let join = handle_outgoing_tasks(Arc::clone(&stream), remote).await;
+    let (tx, rx) = mpsc::channel(2);
+    let heartbeat = handle_heartbeat(Arc::clone(&stream), remote, rx).await;
 
     loop {
         let packet = match try_read_packet(&stream, &remote).await {
@@ -72,7 +74,11 @@ async fn process_stream(
             Packet::Request(req) => {
                 handle_request(Arc::clone(&stream), remote, req, Arc::clone(&limiter)).await;
             }
-            Packet::Heartbeat => (),
+            Packet::Heartbeat => {
+                if tx.send(()).await.is_err() {
+                    break;
+                }
+            }
             _ => {
                 warn!("Received context-invalid packet on {:?}", remote);
                 break;
@@ -81,20 +87,42 @@ async fn process_stream(
     }
     info!("Shutting down ingress for {:?}", remote);
 
-    join.await?;
+    heartbeat.await?;
     Ok(())
 }
 
-async fn handle_outgoing_tasks(
+async fn handle_heartbeat(
     stream: Arc<AsyncMutex<TcpStream>>,
     remote: SocketAddr,
+    mut rx: Receiver<()>,
 ) -> JoinHandle<()> {
-    let heartbeat = {
-        tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(30));
+    let last_heartbeat = Arc::new(RwLock::new(SystemTime::now()));
 
-            loop {
-                interval.tick().await;
+    let recv = {
+        let last_heartbeat = Arc::clone(&last_heartbeat);
+        tokio::spawn(async move {
+            while let Some(_) = rx.recv().await {
+                *last_heartbeat.write().await = SystemTime::now();
+            }
+        })
+    };
+
+    let send = tokio::spawn(async move {
+        let mut interval = interval(Duration::from_secs(30));
+
+        loop {
+            interval.tick().await;
+            let elapsed = SystemTime::now()
+                .duration_since(last_heartbeat.read().await.to_owned())
+                .unwrap();
+            if elapsed.as_secs() > 60 {
+                warn!(
+                    "{:?} timed out, failed to receive heartbeats for 60 seconds.",
+                    remote
+                );
+            }
+
+            {
                 let write = Packet::Heartbeat.write(&mut *stream.lock().await).await;
 
                 if let Err(err) = write {
@@ -105,10 +133,14 @@ async fn handle_outgoing_tasks(
                     break;
                 }
             }
-        })
-    };
+        }
+    });
 
-    return heartbeat;
+    return tokio::spawn(async move {
+        let _ = send.await;
+        recv.abort();
+        let _ = recv.await;
+    });
 }
 
 async fn handle_request(
