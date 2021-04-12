@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use std::{env, mem};
@@ -58,9 +59,9 @@ async fn process_stream(
     let stream = Arc::new(AsyncMutex::new(stream));
 
     let (tx, rx) = mpsc::channel(2);
-    let heartbeat = handle_heartbeat(Arc::clone(&stream), remote, rx).await;
+    let (handle, interrupt) = handle_heartbeat(Arc::clone(&stream), remote, rx).await;
 
-    loop {
+    while !interrupt.load(Ordering::Relaxed) {
         let packet = match try_read_packet(&stream, &remote).await {
             Ok(packet) => packet,
             Err(true) => break,
@@ -87,7 +88,7 @@ async fn process_stream(
     }
     info!("Shutting down ingress for {:?}", remote);
 
-    heartbeat.await?;
+    handle.await?;
     Ok(())
 }
 
@@ -95,7 +96,7 @@ async fn handle_heartbeat(
     stream: Arc<AsyncMutex<TcpStream>>,
     remote: SocketAddr,
     mut rx: Receiver<()>,
-) -> JoinHandle<()> {
+) -> (JoinHandle<()>, Arc<AtomicBool>) {
     let last_heartbeat = Arc::new(RwLock::new(SystemTime::now()));
 
     let recv = {
@@ -136,11 +137,19 @@ async fn handle_heartbeat(
         }
     });
 
-    return tokio::spawn(async move {
-        let _ = send.await;
-        recv.abort();
-        let _ = recv.await;
-    });
+    let interrupt = Arc::new(AtomicBool::new(false));
+
+    let handle = {
+        let interrupt = Arc::clone(&interrupt);
+        tokio::spawn(async move {
+            let _ = send.await;
+            recv.abort();
+            let _ = recv.await;
+            interrupt.store(true, Ordering::Relaxed);
+        })
+    };
+
+    return (handle, interrupt);
 }
 
 async fn handle_request(
