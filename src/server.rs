@@ -5,10 +5,11 @@ use std::time::Duration;
 use std::{env, mem};
 
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, Semaphore};
-use tokio::time::interval;
+use tokio::sync::{Mutex as AsyncMutex, Semaphore};
+use tokio::task::JoinHandle;
+use tokio::time::{interval, sleep};
 
-use plugins_commons::model::{BuildQueued, BuildStatus, Packet, Tagged};
+use plugins_commons::model::{BuildContext, BuildQueued, BuildStatus, Packet, Tagged};
 
 use crate::spawner::spawn;
 use crate::utils::error::drop_errors_or_default;
@@ -53,106 +54,136 @@ async fn process_stream(
     remote: SocketAddr,
     limiter: Arc<Semaphore>,
 ) -> Result<(), Box<dyn Error>> {
-    let (mut ingress, mut egress) = stream.into_split();
+    let stream = Arc::new(AsyncMutex::new(stream));
 
-    let join = {
-        let (join, tx) = {
-            let (tx, mut rx) = mpsc::unbounded_channel::<Packet>();
+    let join = handle_outgoing_tasks(Arc::clone(&stream), remote).await;
 
-            let egress_join = tokio::spawn(async move {
-                while let Some(packet) = rx.recv().await {
-                    if packet.write(&mut egress).await.is_err() {
-                        break;
-                    }
-                }
-
-                info!("Shutting down egress for {:?}", remote);
-            });
-
-            let heartbeat_join = {
-                let tx = tx.clone();
-                tokio::spawn(async move {
-                    let mut interval = interval(Duration::from_secs(30));
-
-                    interval.tick().await;
-                    while let Ok(()) = tx.send(Packet::Heartbeat) {
-                        interval.tick().await;
-                    }
-
-                    info!("Shutting down heartbeat task for {:?}", remote)
-                })
-            };
-
-            let join = tokio::spawn(async move {
-                let _ = egress_join.await;
-                let _ = heartbeat_join.await;
-            });
-
-            (join, tx)
+    loop {
+        let packet = match try_read_packet(&stream, &remote).await {
+            Ok(packet) => packet,
+            Err(true) => break,
+            Err(false) => {
+                sleep(Duration::from_millis(50)).await;
+                continue;
+            }
         };
 
-        loop {
-            let packet = if let Ok(packet) = Packet::read(&mut ingress).await {
-                packet
-            } else {
-                warn!("Received malformed packet on {:?}", remote);
-
+        match packet {
+            Packet::Request(req) => {
+                handle_request(Arc::clone(&stream), remote, req, Arc::clone(&limiter)).await;
+            }
+            Packet::Heartbeat => (),
+            _ => {
+                warn!("Received context-invalid packet on {:?}", remote);
                 break;
-            };
-
-            match packet {
-                Packet::Request(req) => {
-                    let uuid = req.uuid;
-
-                    info!("Received build request {} on {:?}", uuid, remote);
-
-                    let slots_available = limiter.available_permits();
-
-                    let tx = tx.clone();
-                    let limiter = Arc::clone(&limiter);
-                    tokio::spawn(async move {
-                        let mut ack = Packet::Acknowledge(Tagged {
-                            uuid,
-                            inner: BuildQueued {
-                                queued: false,
-                                slots_available,
-                            },
-                        });
-
-                        if let Ok(permit) = limiter.try_acquire() {
-                            if let Packet::Acknowledge(ref mut t) = &mut ack {
-                                t.inner.queued = true;
-                            }
-                            let _ = tx.send(ack);
-
-                            tokio::task::spawn_blocking(move || {
-                                let mut res = req.fork(BuildStatus::LowLevelError);
-                                res.inner = drop_errors_or_default(spawn(req.inner));
-
-                                info!("Completed build request {} on {:?}", uuid, remote);
-                                let _ = tx.send(Packet::Response(res));
-                            })
-                            .await
-                            .unwrap();
-                            mem::drop(permit);
-                        } else {
-                            info!("Rejected build request {} on {:?}", uuid, remote);
-                            let _ = tx.send(ack);
-                        }
-                    });
-                }
-                Packet::Heartbeat => (),
-                _ => {
-                    warn!("Received context-invalid packet on {:?}", remote);
-                    break;
-                }
             }
         }
-        info!("Shutting down ingress for {:?}", remote);
-
-        join
-    };
+    }
+    info!("Shutting down ingress for {:?}", remote);
 
     join.await?;
     Ok(())
+}
+
+async fn handle_outgoing_tasks(
+    stream: Arc<AsyncMutex<TcpStream>>,
+    remote: SocketAddr,
+) -> JoinHandle<()> {
+    let heartbeat = {
+        tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(30));
+
+            loop {
+                interval.tick().await;
+                let write = Packet::Heartbeat.write(&mut *stream.lock().await).await;
+
+                if let Err(err) = write {
+                    info!(
+                        "Shutting down heartbeat task for {:?} Reason: {:?}",
+                        remote, err
+                    );
+                    break;
+                }
+            }
+        })
+    };
+
+    return heartbeat;
+}
+
+async fn handle_request(
+    stream: Arc<AsyncMutex<TcpStream>>,
+    remote: SocketAddr,
+    req: Tagged<BuildContext>,
+    limiter: Arc<Semaphore>,
+) {
+    let uuid = req.uuid;
+
+    info!("Received build request {} on {:?}", uuid, remote);
+
+    let slots_available = limiter.available_permits();
+
+    tokio::spawn(async move {
+        let mut ack = Packet::Acknowledge(Tagged {
+            uuid,
+            inner: BuildQueued {
+                queued: false,
+                slots_available,
+            },
+        });
+
+        let mut task = None;
+        if let Ok(permit) = limiter.try_acquire() {
+            if let Packet::Acknowledge(ref mut t) = &mut ack {
+                t.inner.queued = true;
+            }
+
+            task = Some(async {
+                let resp = tokio::task::spawn_blocking(move || {
+                    let mut res = req.fork(BuildStatus::LowLevelError);
+                    res.inner = drop_errors_or_default(spawn(req.inner));
+
+                    info!("Completed build request {} on {:?}", uuid, remote);
+                    Packet::Response(res)
+                })
+                .await
+                .unwrap();
+
+                mem::drop(permit);
+                drop_errors_or_default(resp.write(&mut *stream.lock().await).await);
+            })
+        } else {
+            info!("Rejected build request {} on {:?}", uuid, remote);
+        };
+
+        {
+            drop_errors_or_default(ack.write(&mut *stream.lock().await).await);
+        }
+
+        if let Some(task) = task {
+            task.await;
+        }
+    });
+}
+
+async fn try_read_packet(
+    stream: &Arc<AsyncMutex<TcpStream>>,
+    remote: &SocketAddr,
+) -> Result<Packet, bool> {
+    let try_read = {
+        let mut stream = stream.lock().await;
+        Packet::try_read(&mut *stream).await
+    };
+
+    match try_read {
+        Ok(Some(packet)) => Ok(packet),
+        Ok(None) => Err(false),
+        Err(err) => {
+            warn!(
+                "Received malformed packet on {:?} Reason: {:?}",
+                remote, err
+            );
+            Err(true)
+        }
+    }
 }

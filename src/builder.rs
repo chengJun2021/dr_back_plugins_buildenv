@@ -1,8 +1,8 @@
-use std::{env, fs};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::{env, fs};
 
 use plugins_commons::model::{BuildContext, SubprocessOutputs};
 
@@ -24,9 +24,9 @@ pub(crate) fn execute_lint(
         // ```
         "--",
     ]
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<_>>();
+    .iter()
+    .map(|s| s.to_string())
+    .collect::<Vec<_>>();
 
     cmd.extend(
         ctx.files
