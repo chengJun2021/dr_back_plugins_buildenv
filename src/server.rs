@@ -116,11 +116,12 @@ async fn handle_heartbeat(
             let elapsed = SystemTime::now()
                 .duration_since(last_heartbeat.read().await.to_owned())
                 .unwrap();
-            if elapsed.as_secs() > 60 {
+            if elapsed.as_secs() > 45 {
                 warn!(
-                    "{:?} timed out, failed to receive heartbeats for 60 seconds.",
+                    "{:?} timed out, failed to receive heartbeats for more than 45 seconds.",
                     remote
                 );
+                return;
             }
 
             {
