@@ -91,8 +91,8 @@ fn execute_unprivileged_command<S: AsRef<OsStr>>(
     return Ok((
         out.status.code().unwrap_or(1),
         SubprocessOutputs {
-            stdout: stdout.replace(&pwd_string, ""),
-            stderr: stderr.replace(&pwd_string, ""),
+            stdout: stdout.replace(&pwd_string, "./"),
+            stderr: stderr.replace(&pwd_string, "./"),
         },
     ));
 }
