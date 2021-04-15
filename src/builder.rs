@@ -31,7 +31,7 @@ pub(crate) fn execute_lint(
     cmd.extend(
         ctx.files
             .keys()
-            .filter(|k| k.ends_with("js") || k.ends_with("jsx"))
+            .filter(|k| k.ends_with(".js") || k.ends_with(".jsx"))
             .map(|k| format!("src/{}", k)),
     );
 

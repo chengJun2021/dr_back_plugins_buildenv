@@ -1,7 +1,14 @@
 import React from 'react';
+import './index.scss';
+import "../package.json";
+import * as ReactDOM from "react-dom";
+import includeme from "./includeme.png";
 
-console.warn("This JSX module has not been built properly.")
+const TestyMcTestface = () => <div className="red-text">Test</div>
 
-const RootElement = () => (<div className="--dr-not-built-properly">"This JSX module has not been built properly."</div>)
-
-export default RootElement;
+document.addEventListener("DOMContentLoaded", () => {
+    ReactDOM.render(<div>
+        <TestyMcTestface/>
+        <img src={includeme} alt="webpack logo, experimenting with loading images atm"/>
+    </div>, document.body)
+})
