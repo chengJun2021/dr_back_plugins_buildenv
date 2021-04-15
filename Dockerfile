@@ -1,10 +1,22 @@
+FROM rust:buster as cache
+RUN rustup default nightly
+
+WORKDIR /app
+COPY Cargo.* ./
+COPY plugins_commons/Cargo.* plugins_commons/
+RUN mkdir src plugins_commons/src; echo "fn main() { panic!(\"Cached executable is being used\") }" > src/main.rs; touch plugins_commons/src/lib.rs
+RUN cargo build --release
+RUN rm -r src plugins_commons target/release/buildenv*
+RUN find $PWD -name "*plugins_commons*" -depth -print0 | xargs -0 rm -r
+
 FROM rust:buster as builder
 RUN rustup default nightly
 
 WORKDIR /app
+COPY --from=cache /app/ ./
 COPY . .
-RUN cargo build --release
 
+RUN cargo build --release
 
 FROM node:lts-buster
 WORKDIR /honeypot

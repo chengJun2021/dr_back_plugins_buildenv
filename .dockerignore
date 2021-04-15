@@ -6,3 +6,4 @@ overlay/dist
 overlay/node_modules
 .idea
 *.iml
+*.md
