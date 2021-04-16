@@ -3,7 +3,7 @@ extern crate zip;
 
 use std::error::Error;
 use std::fs;
-use std::io::{self, BufReader, Cursor};
+use std::io::{self, BufReader, Cursor, Write};
 use std::path::{Path, PathBuf};
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
@@ -67,34 +67,56 @@ pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>
     // Run packaging utility
     let out_directory: PathBuf = working_directory.join("dist");
     return Ok(BuildStatus::Success {
-        zip: Base64Encoded::create(&create_archive(&out_directory)?),
+        zip: Base64Encoded::create(&create_distribution(&out_directory)?),
         eslint_outputs,
         webpack_outputs,
     });
 }
 
-/// Create a shallow copy of the directory
+/// Create a HTML bundle of everything that is needed to render the plugin
 ///
 /// Currently only taking the top level files and none of the directories
-pub(crate) fn create_archive(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut zip_buf = vec![];
+pub(crate) fn create_distribution(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut buf = vec![];
+    let mut distribution = Cursor::new(&mut buf);
 
-    {
-        let mut archive = ZipWriter::new(Cursor::new(&mut zip_buf));
+    distribution.write_all(
+        b"<!doctype html><html lang='en'>\
+        <head>\
+            <meta charset='utf-8'>\
+            <meta name='viewport' content='width=device-width,initial-scale=1'>\
+            <title>A dR Plugin</title>",
+    )?;
 
-        for entry in out_dir.read_dir()? {
-            let dir = entry?;
-            if dir.metadata()?.is_file() {
-                archive.start_file(dir.file_name().to_string_lossy(), FileOptions::default())?;
+    for entry in out_dir.read_dir()? {
+        let dir = entry?;
+        if dir.metadata()?.is_file() {
+            let name = dir.file_name().to_string_lossy();
 
-                let mut file = BufReader::new(fs::OpenOptions::new().read(true).open(dir.path())?);
+            let ext = if let Some(ext) = name.split(".").last() {
+                ext
+            } else {
+                continue;
+            };
+            let mut file = BufReader::new(fs::OpenOptions::new().read(true).open(dir.path())?);
 
-                io::copy(&mut file, &mut archive)?;
+            match ext {
+                "css" => {
+                    distribution.write_all(b"<style type='text/css'>")?;
+                    io::copy(&mut file, &mut distribution)?;
+                    distribution.write_all(b"</style>")?;
+                }
+                "js" => {
+                    distribution.write_all(b"<script type='text/javascript'>")?;
+                    io::copy(&mut file, &mut distribution)?;
+                    distribution.write_all(b"</script>")?;
+                }
+                _ => continue,
             }
         }
-
-        archive.finish()?;
     }
 
-    return Ok(zip_buf);
+    distribution.write_all(b"</head><body></body></html>")?;
+
+    return Ok(buf);
 }

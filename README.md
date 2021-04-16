@@ -30,7 +30,7 @@ dr_back_plugins_buildenv/
  │   │   └─ rules/
  │   │       └─ no-import-fn.js
  │   ├─ src/
- │   │   ├─ dodgyImport.js
+ │   │   ├─ includeme.png
  │   │   ├─ index.jsx
  │   │   └─ index.scss
  │   ├─ .babelrc
