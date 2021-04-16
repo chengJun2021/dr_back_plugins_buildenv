@@ -1,5 +1,4 @@
 extern crate tempdir;
-extern crate zip;
 
 use std::error::Error;
 use std::fs;
@@ -12,8 +11,6 @@ use crate::builder::*;
 use crate::utils::fs::rcopy;
 
 use self::tempdir::TempDir;
-use self::zip::write::FileOptions;
-use self::zip::ZipWriter;
 
 /// Run the build with all scripts and objects in the supplied [`BuildContext`]
 pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>> {
@@ -91,7 +88,8 @@ pub(crate) fn create_distribution(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Err
     for entry in out_dir.read_dir()? {
         let dir = entry?;
         if dir.metadata()?.is_file() {
-            let name = dir.file_name().to_string_lossy();
+            let name = dir.file_name();
+            let name = name.to_string_lossy();
 
             let ext = if let Some(ext) = name.split(".").last() {
                 ext
