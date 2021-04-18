@@ -32,7 +32,8 @@ dr_back_plugins_buildenv/
  │   ├─ src/
  │   │   ├─ includeme.png
  │   │   ├─ index.jsx
- │   │   └─ index.scss
+ │   │   ├─ index.scss
+ │   │   └─ thicc.png
  │   ├─ .babelrc
  │   ├─ .eslintrc.json
  │   ├─ .gitignore
