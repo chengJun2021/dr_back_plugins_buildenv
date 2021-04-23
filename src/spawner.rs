@@ -28,10 +28,9 @@ pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>
     {
         let sus_paths = ctx.sanitize();
         if sus_paths.len() > 0 {
-            return Ok(BuildStatus::ValidationError(format!(
-                "Possible path traversal attack detected.\n{:?}",
-                sus_paths
-            )));
+            return Ok(BuildStatus::ValidationError {
+                message: format!("Possible path traversal attack detected.\n{:?}", sus_paths),
+            });
         };
     }
 
