@@ -3,7 +3,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
-    entry: {react: './src/index.jsx'},
+    entry: {main: './src/index.jsx'},
     resolve: {
         modules: [
             path.resolve(__dirname, 'src'),
