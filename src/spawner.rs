@@ -2,7 +2,7 @@ extern crate tempdir;
 
 use std::error::Error;
 use std::fs;
-use std::io::{self, BufReader, Cursor, Write};
+use std::io::{self, BufReader, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
@@ -107,6 +107,17 @@ pub(crate) fn create_distribution(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Err
                     distribution.write_all(b"<script type='text/javascript'>")?;
                     io::copy(&mut file, &mut distribution)?;
                     distribution.write_all(b"</script>")?;
+                }
+                "txt" => {
+                    let mut str = String::new();
+                    file.read_to_string(&mut str)?;
+
+                    str = str.replace("<", "&lt;");
+                    str = str.replace(">", "&gt;");
+
+                    distribution.write_all(b"<!--\n\n")?;
+                    distribution.write_all(str.as_bytes())?;
+                    distribution.write_all(b"\n-->")?;
                 }
                 _ => continue,
             }

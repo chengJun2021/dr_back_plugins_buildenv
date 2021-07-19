@@ -31,6 +31,7 @@ dr_back_plugins_buildenv/
  │   │       └─ no-import-fn.js
  │   ├─ src/
  │   │   ├─ includeme.png
+ │   │   ├─ includeme.webp
  │   │   ├─ index.jsx
  │   │   ├─ index.scss
  │   │   └─ thicc.png
