@@ -47,10 +47,12 @@ pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>
         });
     }
 
+    let envs = vec![("APPLICATION_ENTRY_POINT", ctx.find_root_file())];
+
     // The error embedded occurs due to io/process errors,
     // in that case the only appropriate solution is to panic and let k8s
     // restart the pod
-    let (code, webpack_outputs) = execute_build(working_directory)?;
+    let (code, webpack_outputs) = execute_build(working_directory, envs)?;
 
     if code != 0 {
         return Ok(BuildStatus::WebpackExit {

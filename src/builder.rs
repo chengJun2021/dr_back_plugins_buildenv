@@ -39,11 +39,15 @@ pub(crate) fn execute_lint(
 }
 
 /// System to setup the build environment and execution of webpack
-pub(crate) fn execute_build(build_dir: &Path) -> Result<(i32, SubprocessOutputs), Box<dyn Error>> {
+pub(crate) fn execute_build<I: IntoIterator<Item = (K, V)>, K: AsRef<OsStr>, V: AsRef<OsStr>>(
+    build_dir: &Path,
+    envs: I,
+) -> Result<(i32, SubprocessOutputs), Box<dyn Error>> {
     // Create a user-owned output directory
     let out_path = build_dir.join("dist");
     fs::create_dir(&out_path)?;
     Command::new("chown")
+        .envs(envs)
         .arg("bob:builder")
         .arg(&out_path)
         .spawn()?
