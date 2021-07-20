@@ -6,6 +6,8 @@ use std::{env, fs};
 
 use plugins_commons::model::{BuildContext, SubprocessOutputs};
 
+type Envs = Vec<(&'static str, String)>;
+
 /// System to execute eslint
 pub(crate) fn execute_lint(
     build_dir: &Path,
@@ -35,19 +37,18 @@ pub(crate) fn execute_lint(
             .map(|k| format!("src/{}", k)),
     );
 
-    return execute_unprivileged_command(build_dir, &cmd);
+    return execute_unprivileged_command(build_dir, vec![], &cmd);
 }
 
 /// System to setup the build environment and execution of webpack
-pub(crate) fn execute_build<I: IntoIterator<Item = (K, V)>, K: AsRef<OsStr>, V: AsRef<OsStr>>(
+pub(crate) fn execute_build(
     build_dir: &Path,
-    envs: I,
+    envs: Envs,
 ) -> Result<(i32, SubprocessOutputs), Box<dyn Error>> {
     // Create a user-owned output directory
     let out_path = build_dir.join("dist");
     fs::create_dir(&out_path)?;
     Command::new("chown")
-        .envs(envs)
         .arg("bob:builder")
         .arg(&out_path)
         .spawn()?
@@ -55,6 +56,7 @@ pub(crate) fn execute_build<I: IntoIterator<Item = (K, V)>, K: AsRef<OsStr>, V: 
 
     return execute_unprivileged_command(
         build_dir,
+        envs,
         &[
             "node",
             "node_modules/webpack-cli/bin/cli.js",
@@ -65,6 +67,7 @@ pub(crate) fn execute_build<I: IntoIterator<Item = (K, V)>, K: AsRef<OsStr>, V: 
 
 fn execute_unprivileged_command<S: AsRef<OsStr>>(
     pwd: &Path,
+    envs: Envs,
     subcommand: &[S],
 ) -> Result<(i32, SubprocessOutputs), Box<dyn Error>> {
     // Path has the npm stuffs in it, we have to graft that back into the process after wiping the rest of the env
@@ -80,6 +83,7 @@ fn execute_unprivileged_command<S: AsRef<OsStr>>(
         .env_clear()
         // Reapply PATH, otherwise it can't access coreutils/busybox, npm/node
         .env("PATH", path)
+        .envs(envs)
         // Pass PATH through, set user to bob
         .args(&["--preserve-env", "-u", "bob"])
         .current_dir(&pwd)
