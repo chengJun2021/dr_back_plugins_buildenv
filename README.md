@@ -28,8 +28,10 @@ dr_back_plugins_buildenv/
  ├─ overlay/
  │   ├─ lib/
  │   │   └─ rules/
- │   │       └─ no-import-fn.js
+ │   │       └─ no-parent-scope-imports.js
  │   ├─ src/
+ │   │   ├─ test/
+ │   │   │   └─ parentimport.js
  │   │   ├─ includeme.png
  │   │   ├─ includeme.webp
  │   │   ├─ index.jsx

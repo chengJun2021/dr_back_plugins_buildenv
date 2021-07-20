@@ -31,10 +31,9 @@
     "import/no-unresolved": "error",
     "import/no-dynamic-require": "error",
     "import/no-absolute-path": "error",
-    "import/no-relative-parent-imports": "error",
     "import/no-useless-path-segments": "error",
     "import/no-commonjs": "error",
-    "no-import-fn": "error"
+    "no-parent-scope-imports": "error"
   },
   "env": {
     "browser": true
