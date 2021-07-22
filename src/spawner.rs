@@ -1,9 +1,9 @@
 extern crate tempdir;
 
 use std::error::Error;
+use std::fs;
 use std::io::{self, BufReader, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
-use std::fs;
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 
