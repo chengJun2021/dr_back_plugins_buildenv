@@ -108,7 +108,7 @@ pub(crate) fn create_distribution(out_dir: &Path) -> Result<Vec<u8>, Box<dyn Err
                 "js" => {
                     distribution.write_all(b"<script type='text/javascript'>")?;
                     io::copy(&mut file, &mut distribution)?;
-                    distribution.write_all(b"</script>")?;
+                    distribution.write_all(b"\n</script>")?;
                 }
                 "txt" => {
                     let mut str = String::new();

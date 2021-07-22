@@ -1,0 +1,23 @@
+{
+  "name": "dr-plugin-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DR Plugins SDK for the Plugins Ecosystem",
+  "main": "src/index.ts",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matt253657/dr_plugins_build_env.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/possie-engine/dr_plugins_build_env/issues"
+  },
+  "devDependencies": {
+    "typescript": "^4.3.4"
+  },
+  "dependencies": {
+    "dot-object": "^2.1.4"
+  }
+}

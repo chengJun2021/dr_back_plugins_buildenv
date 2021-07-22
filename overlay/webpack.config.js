@@ -1,13 +1,16 @@
 const path = require('path');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const WebpackObfuscator = require('webpack-obfuscator');
 
 module.exports = {
     entry: {main: `./src/${process.env.APPLICATION_ENTRY_POINT || 'index.jsx'}`},
+    mode: 'production',
     output: {
         path: path.join(__dirname, 'dist'),
         filename: 'bundle.js'
     },
+    devtool: 'inline-source-map',
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx']
     },
@@ -51,6 +54,12 @@ module.exports = {
                 ]
             },
             {
+                test: /\.ya?ml$/,
+                type: 'json',
+                use: 'yaml-loader'
+
+            },
+            {
                 test: /\.(gif|png|jpe?g|svg|webp)$/i,
                 use: [
                     {
@@ -61,6 +70,11 @@ module.exports = {
                         },
                     },
                 ],
+            },
+            {
+                test: /^bundle\.js$/,
+                enforce: 'pre',
+                use: ['source-map-loader'],
             }
         ]
     },
@@ -71,6 +85,11 @@ module.exports = {
         new HtmlWebpackPlugin({
             title: 'Plugin',
             filename: 'index.html',
+        }),
+        new WebpackObfuscator({
+            identifierNamesGenerator: 'mangled',
+            target: 'browser-no-eval',
+            sourceMap: true,
         })
     ]
 };
