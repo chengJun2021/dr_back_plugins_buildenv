@@ -27,11 +27,23 @@ dr_back_plugins_buildenv/
  │   └─ importme.privileged.json
  ├─ overlay/
  │   ├─ lib/
- │   │   └─ rules/
- │   │       └─ no-parent-scope-imports.js
+ │   │   ├─ rules/
+ │   │   │   └─ no-parent-scope-imports.js
+ │   │   └─ sdk/
+ │   │       ├─ src/
+ │   │       │   ├─ config/
+ │   │       │   │   ├─ index.ts
+ │   │       │   │   ├─ json.ts
+ │   │       │   │   ├─ yaml.ts
+ │   │       │   │   └─ yml.ts
+ │   │       │   ├─ index.ts
+ │   │       │   └─ pluginState.ts
+ │   │       ├─ package-lock.json
+ │   │       └─ package.json
  │   ├─ src/
  │   │   ├─ test/
  │   │   │   └─ parentimport.js
+ │   │   ├─ config.yml
  │   │   ├─ includeme.png
  │   │   ├─ includeme.webp
  │   │   ├─ index.jsx
@@ -42,6 +54,7 @@ dr_back_plugins_buildenv/
  │   ├─ .gitignore
  │   ├─ package-lock.json
  │   ├─ package.json
+ │   ├─ tsconfig.json
  │   └─ webpack.config.js
  ├─ plugins_commons/
  │   ├─ .github/
