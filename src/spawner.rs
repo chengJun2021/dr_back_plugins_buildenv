@@ -3,8 +3,7 @@ extern crate tempdir;
 use std::error::Error;
 use std::io::{self, BufReader, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
-use std::{fs, thread};
+use std::fs;
 
 use plugins_commons::model::{Base64Encoded, BuildContext, BuildStatus};
 
@@ -20,8 +19,6 @@ pub(crate) fn spawn(mut ctx: BuildContext) -> Result<BuildStatus, Box<dyn Error>
 
     // Copy node stufut fs from pwd to subprocess working dir
     rcopy(working_directory)?;
-
-    thread::sleep(Duration::from_secs(60));
 
     // Drop build context into our working directory
     let source_directory: PathBuf = working_directory.join("src");
