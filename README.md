@@ -52,6 +52,7 @@ dr_back_plugins_buildenv/
  │   ├─ .babelrc
  │   ├─ .eslintrc.json
  │   ├─ .gitignore
+ │   ├─ README.md
  │   ├─ package-lock.json
  │   ├─ package.json
  │   ├─ tsconfig.json
