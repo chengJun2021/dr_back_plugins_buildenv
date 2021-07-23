@@ -1,6 +1,11 @@
 import dot from "dot-object";
 import {Config} from "./config";
 
+export interface PluginCommsParams {
+    // The default configuration object to fall back to if the survey does't provide it.
+    defaultConfig?: Config
+}
+
 // Communicate with the parent process to obtain information such as config
 // and to share the state with the parent process
 export class PluginComms<T> {
@@ -19,8 +24,8 @@ export class PluginComms<T> {
     // It's recommended that only one instance of this class is instantiated,
     // and that it's created as soon as practicable. As delaying instantiation
     // may impact on user experience, especially with custom configurations.
-    constructor(defaultConfig: Config = {}) {
-        this.defaultConfig = defaultConfig;
+    constructor(props?: PluginCommsParams) {
+        this.defaultConfig = props?.defaultConfig ?? {};
         this.listener();
         this.obtainInstanceId();
     }

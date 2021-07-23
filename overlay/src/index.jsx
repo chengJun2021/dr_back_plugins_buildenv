@@ -8,7 +8,9 @@ import {PluginComms} from "dr-plugin-sdk/pluginComms";
 import {renderOnLoad} from "dr-plugin-sdk";
 import {ConfigYML} from "dr-plugin-sdk/config/yml";
 
-const state = new PluginComms(new ConfigYML());
+const state = new PluginComms({
+    defaultConfig: new ConfigYML()
+});
 
 console.log(state.getConfigNode("invalid"))
 
