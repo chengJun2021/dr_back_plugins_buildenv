@@ -27,8 +27,6 @@ dr_back_plugins_buildenv/
  │   └─ importme.privileged.json
  ├─ overlay/
  │   ├─ lib/
- │   │   ├─ rules/
- │   │   │   └─ no-parent-scope-imports.js
  │   │   └─ sdk/
  │   │       ├─ config/
  │   │       │   ├─ index.ts
@@ -51,6 +49,7 @@ dr_back_plugins_buildenv/
  │   ├─ .babelrc
  │   ├─ .eslintrc.json
  │   ├─ .gitignore
+ │   ├─ .npmrc
  │   ├─ README.md
  │   ├─ package-lock.json
  │   ├─ package.json

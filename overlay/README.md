@@ -2,8 +2,6 @@
 ```
 overlay/
  ├─ lib/
- │   ├─ rules/
- │   │   └─ no-parent-scope-imports.js
  │   └─ sdk/
  │       ├─ config/
  │       │   ├─ index.ts
