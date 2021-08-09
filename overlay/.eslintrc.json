@@ -16,7 +16,8 @@
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:import/errors",
-    "plugin:import/warnings"
+    "plugin:import/warnings",
+    "plugin:@datareachable/dr_back_plugins_linter/errors"
   ],
   "rules": {
     "eqeqeq": "warn",
@@ -31,8 +32,7 @@
     "import/no-unresolved": "error",
     "import/no-dynamic-require": "error",
     "import/no-absolute-path": "error",
-    "import/no-useless-path-segments": "error",
-    "no-parent-scope-imports": "error"
+    "import/no-useless-path-segments": "error"
   },
   "env": {
     "browser": true,

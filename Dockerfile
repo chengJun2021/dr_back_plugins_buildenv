@@ -1,4 +1,4 @@
-FROM rust:buster as cache
+FROM rust:buster as rustcache
 RUN rustup default nightly
 
 WORKDIR /app
@@ -9,28 +9,29 @@ RUN cargo build --release
 RUN rm -r src plugins_commons target/release/buildenv*
 RUN find $PWD -name "*plugins_commons*" -depth -print0 | xargs -0 rm -r
 
-FROM rust:buster as builder
+FROM rust:buster as rustbuilder
 RUN rustup default nightly
 
 WORKDIR /app
-COPY --from=cache /app/ ./
+COPY --from=rustcache /app/ ./
 COPY . .
 
 RUN cargo build --release
 
-FROM node:lts-buster
-WORKDIR /honeypot
-COPY honeypot /honeypot/
-RUN chmod 400 /honeypot/*privileged*
-
+FROM node:lts-buster as nodenv
 WORKDIR /env
-RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
 COPY overlay /env/
 RUN npm install
-RUN chmod -R +x .
+RUN shred .npmrc; rm .npmrc
+
+FROM node:lts-buster
+WORKDIR /env
+RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+COPY --from=nodenv /env/ /env/
+RUN chmod -R 555 .
 RUN groupadd builder; useradd bob; usermod -aG builder bob
 
-COPY --from=builder /app/target/release/buildenv /usr/local/bin/buildenv
+COPY --from=rustbuilder /app/target/release/buildenv /usr/local/bin/buildenv
 
 # ---x------ for the executable, prevents exploits that attempts to bundle
 # system resources by require() or import()
