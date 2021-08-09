@@ -47,6 +47,17 @@ module.exports = {
             }
         };
 
-        return moduleVisitor(reconstructImportPath, context.options[0]);
+        let visitors = moduleVisitor(reconstructImportPath, context.options[0]);
+        return {
+            ...visitors,
+            "CallExpression": node => {
+                if (node.callee.name === "require") {
+                    node.value = node.arguments[0].value;
+                    reconstructImportPath(node);
+                }
+
+                visitors["CallExpression"](node);
+            }
+        };
     }
 };

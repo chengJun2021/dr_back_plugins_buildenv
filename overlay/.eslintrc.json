@@ -2,7 +2,7 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 12,
+    "ecmaVersion": 2021,
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
@@ -32,10 +32,10 @@
     "import/no-dynamic-require": "error",
     "import/no-absolute-path": "error",
     "import/no-useless-path-segments": "error",
-    "import/no-commonjs": "error",
     "no-parent-scope-imports": "error"
   },
   "env": {
-    "browser": true
+    "browser": true,
+    "node": true
   }
 }
