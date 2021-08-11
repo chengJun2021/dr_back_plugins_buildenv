@@ -41,10 +41,11 @@ dr_back_plugins_buildenv/
  │   │   ├─ test/
  │   │   │   └─ parentimport.js
  │   │   ├─ config.yml
+ │   │   ├─ dataProcessingPlugin.ts
  │   │   ├─ includeme.png
  │   │   ├─ includeme.webp
- │   │   ├─ index.jsx
- │   │   ├─ index.scss
+ │   │   ├─ surveyPlugin.jsx
+ │   │   ├─ surveyPlugin.scss
  │   │   └─ thicc.png
  │   ├─ .babelrc
  │   ├─ .eslintrc.json
