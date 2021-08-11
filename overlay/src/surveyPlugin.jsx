@@ -1,5 +1,5 @@
 import React from 'react';
-import './index.scss';
+import './surveyPlugin.scss';
 import "../package.json";
 import includeme from "./includeme.png";
 import includemewebp from "./includeme.webp";
